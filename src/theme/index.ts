@@ -6,6 +6,7 @@ export const colors = {
   textMuted: '#9aa3b2',
   primary: '#4c8dff',
   onPrimary: '#ffffff',
+  danger: '#ff5c5c',
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24 } as const;
