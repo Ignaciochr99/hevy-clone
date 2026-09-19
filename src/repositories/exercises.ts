@@ -1,7 +1,8 @@
-import { count, eq, sql } from 'drizzle-orm';
+import { and, count, eq, sql } from 'drizzle-orm';
 import type { Equipment, ExerciseType, MuscleGroup } from '../db/enums';
 import { exercises, routineExercises } from '../db/schema';
 import type { Database } from '../db/types';
+import { normalizeSearch } from '../utils/text';
 
 export type Exercise = typeof exercises.$inferSelect;
 
@@ -10,6 +11,12 @@ export type ExerciseInput = {
   muscleGroup: MuscleGroup;
   equipment: Equipment;
   type: ExerciseType;
+};
+
+export type ExerciseFilters = {
+  search?: string;
+  muscleGroup?: MuscleGroup;
+  equipment?: Equipment;
 };
 
 function cleanName(name: string): string {
@@ -38,13 +45,26 @@ export function createExercisesRepository(db: Database) {
   }
 
   return {
-    // COLLATE NOCASE: "banca" queda entre "Aperturas" y "zancadas".
-    list(): Exercise[] {
-      return db
+    // El grupo y el equipo se filtran en SQL; el texto en TypeScript, porque
+    // SQLite no ignora los acentos. COLLATE NOCASE: "banca" queda entre
+    // "Aperturas" y "zancadas".
+    list(filters: ExerciseFilters = {}): Exercise[] {
+      const rows = db
         .select()
         .from(exercises)
+        .where(
+          and(
+            filters.muscleGroup && eq(exercises.muscleGroup, filters.muscleGroup),
+            filters.equipment && eq(exercises.equipment, filters.equipment),
+          ),
+        )
         .orderBy(sql`${exercises.name} COLLATE NOCASE`)
         .all();
+
+      const search = normalizeSearch(filters.search ?? '');
+      return search === ''
+        ? rows
+        : rows.filter((row) => normalizeSearch(row.name).includes(search));
     },
 
     getById,
