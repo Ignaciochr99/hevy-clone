@@ -45,3 +45,7 @@ yarn-error.*
 
 # Docs and lessons (local only)
 docs/
+
+# Android signing keys (never commit)
+*.keystore
+*.jks

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Hevy Clone",
-    "slug": "hevy-clone",
+    "name": "Training Log",
+    "slug": "training-log",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,10 +16,12 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.ic.traininglog"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": ["./plugins/withReleaseSigning"]
   }
 }
