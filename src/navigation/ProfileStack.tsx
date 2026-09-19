@@ -1,6 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ExerciseFormScreen } from '../screens/exercises/ExerciseFormScreen';
-import { ExerciseLibraryScreen } from '../screens/profile/ExerciseLibraryScreen';
+import { ExerciseLibraryScreen } from '../screens/exercises/ExerciseLibraryScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
 import type { ProfileStackParamList } from './types';
 
