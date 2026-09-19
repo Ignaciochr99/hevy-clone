@@ -33,7 +33,7 @@ App Android de registro de entrenamientos inspirada en Hevy, con dos diferencias
 Hevy usa React Native + TypeScript, MobX, React Navigation y Victory Native en el cliente, con Node.js y PostgreSQL en el backend ([oferta de empleo](https://www.hevyapp.com/careers-full-stack-engineer/), [How We Built Hevy](https://www.hevyapp.com/how-we-built-hevy/)). Este proyecto sigue ese stack con dos cambios:
 
 | Área | Elección | Nota |
-|---|---|---|
+| --- | --- | --- |
 | Framework | React Native + TypeScript, gestionado con Expo | Desarrollo con Expo Go, sin Android Studio ni Java en local |
 | Datos | `expo-sqlite` + Drizzle ORM | Sustituye a PostgreSQL: no hay backend |
 | Estado | **Zustand** | Sustituye a MobX por ser más simple de enseñar |
@@ -70,12 +70,13 @@ Hevy usa React Native + TypeScript, MobX, React Navigation y Victory Native en e
 Tres pestañas inferiores, cada una con su propio stack:
 
 | Pestaña | Pantallas |
-|---|---|
+| --- | --- |
 | **Inicio** | Resumen semanal, entrenamientos recientes, detalle de un entrenamiento pasado |
 | **Rutinas** | Lista de rutinas, crear/editar rutina, empezar entrenamiento vacío, elegir una rutina y empezar |
 | **Perfil** | Estadísticas, gráficas, calendario, medidas corporales, ajustes, exportar/importar JSON, biblioteca de ejercicios |
 
 **Selector de ejercicios reutilizable** (biblioteca con búsqueda, filtros y "Crear ejercicio propio"). Se abre desde:
+
 - Crear o editar una rutina.
 - Un entrenamiento en curso (para añadir ejercicios, en especial en un entrenamiento vacío).
 - Perfil, para gestionar la biblioteca sin iniciar una rutina.
@@ -83,6 +84,7 @@ Tres pestañas inferiores, cada una con su propio stack:
 El detalle de un ejercicio (historial y PRs) se abre desde las gráficas del Perfil o al tocar un ejercicio dentro de un entrenamiento.
 
 **Entrenamiento en curso:** pantalla modal sobre las pestañas.
+
 - Una tarjeta por ejercicio con sus series (peso, reps, check).
 - Temporizador de descanso que arranca al completar una serie.
 - Barra flotante visible en cualquier pestaña mientras haya un entrenamiento activo.
@@ -127,7 +129,7 @@ Estimación orientativa: 30 a 50 horas de sesión en total. Lo más incierto son
 ## 7. Build, distribución y alojamiento gratuito
 
 | Servicio | Uso |
-|---|---|
+| --- | --- |
 | GitHub | Repositorio |
 | GitHub Actions | Compilar el APK en la nube |
 | GitHub Releases | Publicar e instalar cada APK |
@@ -138,6 +140,7 @@ Estimación orientativa: 30 a 50 horas de sesión en total. Lo más incierto son
 **Costo:** 0 USD. Actions es ilimitado en repositorios públicos; en privados hay 2000 minutos al mes y un build tarda unos 10 a 15 minutos. Se recomienda repositorio público.
 
 **Limitaciones:**
+
 - Android mostrará un aviso de "origen desconocido" o de Play Protect al instalar fuera de Google Play.
 - No hay actualización automática: se instala el APK nuevo sobre el anterior, y los datos se conservan si está firmado con la misma clave.
 
