@@ -40,7 +40,14 @@ jobs:
         run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
 
       - name: Generate Android project
-        run: npx expo prebuild --platform android --no-install
+        env:
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          export ANDROID_VERSION_NAME="${GITHUB_REF_NAME#v}"
+          npx expo prebuild --platform android --no-install
+
+      - name: Show generated version and signing config
+        run: grep -nE "versionCode|versionName|ANDROID_KEYSTORE_PATH" android/app/build.gradle
 
       - name: Build release APK
         working-directory: android
@@ -49,11 +56,9 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          ANDROID_VERSION_CODE: ${{ github.run_number }}
         run: |
-          export ANDROID_VERSION_NAME="${GITHUB_REF_NAME#v}"
           chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Publish release
         env:

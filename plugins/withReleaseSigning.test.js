@@ -41,10 +41,11 @@ describe('patchBuildGradle', () => {
     expect(out).toMatch(/debug \{\s+signingConfig signingConfigs\.debug\s+\}/);
   });
 
-  it('reads versionCode and versionName from the environment with defaults', () => {
+  it('leaves versionCode and versionName as literals (app.config.js sets them)', () => {
     const out = patchBuildGradle(SAMPLE);
-    expect(out).toContain("versionCode (System.getenv('ANDROID_VERSION_CODE') ?: '1').toInteger()");
-    expect(out).toContain(`versionName System.getenv('ANDROID_VERSION_NAME') ?: "1.0.0"`);
+    expect(out).toContain('versionCode 1');
+    expect(out).toContain('versionName "1.0.0"');
+    expect(out).not.toContain('ANDROID_VERSION');
   });
 
   it('is idempotent', () => {

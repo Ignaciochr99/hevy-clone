@@ -36,20 +36,7 @@ function patchBuildGradle(source) {
   // 2. Se declara signingConfigs.release leyendo las variables de entorno.
   gradle = replaceOrThrow(gradle, /signingConfigs\s*\{/, RELEASE_SIGNING_CONFIG, 'signingConfigs');
 
-  // 3. versionCode y versionName vienen del entorno (CI) o de valores por defecto.
-  gradle = replaceOrThrow(
-    gradle,
-    /versionCode \d+/,
-    "versionCode (System.getenv('ANDROID_VERSION_CODE') ?: '1').toInteger()",
-    'versionCode'
-  );
-  gradle = replaceOrThrow(
-    gradle,
-    /versionName "([^"]*)"/,
-    `versionName System.getenv('ANDROID_VERSION_NAME') ?: "$1"`,
-    'versionName'
-  );
-
+  // versionCode y versionName no se tocan aquí: los define app.config.js.
   return gradle;
 }
 
