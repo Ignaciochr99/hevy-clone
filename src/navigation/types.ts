@@ -11,6 +11,7 @@ export type RoutinesStackParamList = {
 export type ProfileStackParamList = {
   Profile: undefined;
   ExerciseLibrary: undefined;
+  ExerciseForm: { exerciseId?: number };
 };
 
 export type RootTabParamList = {
