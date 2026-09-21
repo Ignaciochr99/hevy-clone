@@ -13,10 +13,8 @@ const es = {
   'workoutDetail.header': 'Entrenamiento',
   'workoutDetail.title': 'Entrenamiento #{id}',
 
-  'routines.placeholder': 'Aquí irán tus rutinas',
   'routines.create': 'Crear rutina',
   'routineEditor.header': 'Nueva rutina',
-  'routineEditor.placeholder': 'Aquí se creará y editará una rutina',
   'routines.empty': 'Aún no tienes rutinas. ¡Crea la primera!',
   'routines.exerciseCount.one': '1 ejercicio',
   'routines.exerciseCount.other': '{count} ejercicios',
@@ -119,10 +117,8 @@ const en: Record<TranslationKey, string> = {
   'workoutDetail.header': 'Workout',
   'workoutDetail.title': 'Workout #{id}',
 
-  'routines.placeholder': 'Your routines will go here',
   'routines.create': 'Create routine',
   'routineEditor.header': 'New routine',
-  'routineEditor.placeholder': 'Routines will be created and edited here',
   'routines.empty': "You don't have any routines yet. Create your first one!",
   'routines.exerciseCount.one': '1 exercise',
   'routines.exerciseCount.other': '{count} exercises',
