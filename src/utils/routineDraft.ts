@@ -1,3 +1,4 @@
+import type { MuscleGroup } from '../db/enums';
 import { DEFAULT_REST_SECONDS, type Routine, type RoutineInput } from '../repositories/routines';
 
 export { DEFAULT_REST_SECONDS };
@@ -13,6 +14,9 @@ export type DraftItem = {
   exerciseId: number;
   exerciseName: string;
   exerciseNameEn: string | null;
+  // Los músculos del ejercicio, para calcular las series por músculo del borrador.
+  muscleGroup: MuscleGroup;
+  secondaryMuscleGroups: MuscleGroup[];
   targetSets: number;
   targetReps: number;
   // RPE objetivo (1 a 10, de 0,5 en 0,5) o null si no se fija.
@@ -33,7 +37,13 @@ const REST_MAX = 600;
 
 export function addItem(
   items: readonly DraftItem[],
-  exercise: { id: number; name: string; nameEn: string | null },
+  exercise: {
+    id: number;
+    name: string;
+    nameEn: string | null;
+    muscleGroup: MuscleGroup;
+    secondaryMuscleGroups: readonly MuscleGroup[];
+  },
   key: string,
 ): DraftItem[] {
   return [
@@ -43,6 +53,8 @@ export function addItem(
       exerciseId: exercise.id,
       exerciseName: exercise.name,
       exerciseNameEn: exercise.nameEn,
+      muscleGroup: exercise.muscleGroup,
+      secondaryMuscleGroups: [...exercise.secondaryMuscleGroups],
       targetSets: DEFAULT_SETS,
       targetReps: DEFAULT_REPS,
       targetRpe: null,
@@ -115,6 +127,8 @@ export function fromRoutine(routine: Routine, nextKey: () => string): DraftItem[
     exerciseId: item.exerciseId,
     exerciseName: item.exerciseName,
     exerciseNameEn: item.exerciseNameEn,
+    muscleGroup: item.muscleGroup,
+    secondaryMuscleGroups: [...item.secondaryMuscleGroups],
     targetSets: item.targetSets,
     targetReps: item.targetReps,
     targetRpe: item.targetRpe,

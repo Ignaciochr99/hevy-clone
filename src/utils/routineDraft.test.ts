@@ -16,9 +16,22 @@ import {
   toRoutineInput,
   type DraftItem,
 } from './routineDraft';
+import { muscleVolume } from './muscleVolume';
 
-const bench = { id: 1, name: 'Press banca', nameEn: 'Bench Press' };
-const squat = { id: 2, name: 'Sentadilla', nameEn: null };
+const bench = {
+  id: 1,
+  name: 'Press banca',
+  nameEn: 'Bench Press',
+  muscleGroup: 'chest',
+  secondaryMuscleGroups: ['triceps', 'shoulders'],
+} as const;
+const squat = {
+  id: 2,
+  name: 'Sentadilla',
+  nameEn: null,
+  muscleGroup: 'quadriceps',
+  secondaryMuscleGroups: [],
+} as const;
 
 // Tres filas: banca (a), sentadilla (b) y banca otra vez (c).
 function threeItems(): DraftItem[] {
@@ -36,6 +49,8 @@ describe('addItem', () => {
         exerciseId: 1,
         exerciseName: 'Press banca',
         exerciseNameEn: 'Bench Press',
+        muscleGroup: 'chest',
+        secondaryMuscleGroups: ['triceps', 'shoulders'],
         targetSets: DEFAULT_SETS,
         targetReps: DEFAULT_REPS,
         targetRpe: null,
@@ -157,6 +172,27 @@ describe('summarize', () => {
   });
 });
 
+describe('series por músculo del borrador', () => {
+  test('muscleVolume calcula el volumen de las filas del borrador', () => {
+    // Dos filas de banca (a y c, 3 series cada una) + sentadilla (b, sin secundarios).
+    // Los tres músculos empatados a 3 series salen en el orden habitual de los grupos.
+    expect(muscleVolume(threeItems())).toEqual([
+      { muscleGroup: 'chest', sets: 6 },
+      { muscleGroup: 'shoulders', sets: 3 },
+      { muscleGroup: 'triceps', sets: 3 },
+      { muscleGroup: 'quadriceps', sets: 3 },
+    ]);
+  });
+
+  test('se recalcula al cambiar las series o quitar una fila', () => {
+    const more = setTarget(threeItems(), 'b', 'targetSets', 5);
+    expect(muscleVolume(more)[1]).toEqual({ muscleGroup: 'quadriceps', sets: 5 });
+
+    const fewer = removeItem(threeItems(), 'c');
+    expect(muscleVolume(fewer)[0]).toEqual({ muscleGroup: 'chest', sets: 3 });
+  });
+});
+
 describe('inmutabilidad', () => {
   test('ninguna función modifica la lista que recibe', () => {
     const items = threeItems();
@@ -210,6 +246,8 @@ describe('toRoutineInput y fromRoutine', () => {
       exerciseId: 2,
       exerciseName: 'Sentadilla',
       exerciseNameEn: null,
+      muscleGroup: 'quadriceps',
+      secondaryMuscleGroups: ['glutes'],
       targetSets: 5,
       targetReps: 5,
       targetRpe: null,
