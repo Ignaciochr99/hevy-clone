@@ -1,6 +1,8 @@
 import { asc, count, desc, eq, sql } from 'drizzle-orm';
 import { exercises, routineExercises, routines } from '../db/schema';
+import type { MuscleGroup } from '../db/enums';
 import type { Database } from '../db/types';
+import { muscleVolume, type MuscleVolume } from '../utils/muscleVolume';
 import { RepositoryError } from './errors';
 
 // Descanso por defecto entre series (debe coincidir con el DEFAULT de la columna).
@@ -27,6 +29,8 @@ export type RoutineExercise = {
   exerciseId: number;
   exerciseName: string;
   exerciseNameEn: string | null;
+  muscleGroup: MuscleGroup;
+  secondaryMuscleGroups: MuscleGroup[];
   position: number;
   targetSets: number;
   targetReps: number;
@@ -49,6 +53,8 @@ export type RoutineSummary = {
   exerciseCount: number;
   // Suma de las series objetivo de todos sus ejercicios.
   totalSets: number;
+  // Series por músculo: 1 por serie al grupo principal y 0,5 a cada secundario.
+  muscleVolume: MuscleVolume[];
 };
 
 // Devuelve el nombre ya limpio.
@@ -108,6 +114,8 @@ export function createRoutinesRepository(db: Database) {
         exerciseId: routineExercises.exerciseId,
         exerciseName: exercises.name,
         exerciseNameEn: exercises.nameEn,
+        muscleGroup: exercises.muscleGroup,
+        secondaryMuscleGroups: exercises.secondaryMuscleGroups,
         position: routineExercises.position,
         targetSets: routineExercises.targetSets,
         targetReps: routineExercises.targetReps,
@@ -132,7 +140,7 @@ export function createRoutinesRepository(db: Database) {
 
   return {
     list(): RoutineSummary[] {
-      return db
+      const summaries = db
         .select({
           id: routines.id,
           name: routines.name,
@@ -145,6 +153,29 @@ export function createRoutinesRepository(db: Database) {
         .groupBy(routines.id)
         .orderBy(desc(routines.updatedAt), desc(routines.id))
         .all();
+
+      // Una sola consulta para los músculos de todas las rutinas; se agrupan
+      // por rutina en TypeScript y se calcula el volumen de cada una.
+      const rows = db
+        .select({
+          routineId: routineExercises.routineId,
+          muscleGroup: exercises.muscleGroup,
+          secondaryMuscleGroups: exercises.secondaryMuscleGroups,
+          targetSets: routineExercises.targetSets,
+        })
+        .from(routineExercises)
+        .innerJoin(exercises, eq(routineExercises.exerciseId, exercises.id))
+        .all();
+
+      const byRoutine = new Map<number, typeof rows>();
+      for (const row of rows) {
+        byRoutine.set(row.routineId, [...(byRoutine.get(row.routineId) ?? []), row]);
+      }
+
+      return summaries.map((summary) => ({
+        ...summary,
+        muscleVolume: muscleVolume(byRoutine.get(summary.id) ?? []),
+      }));
     },
 
     getById,

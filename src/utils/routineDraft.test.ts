@@ -197,8 +197,8 @@ describe('toRoutineInput y fromRoutine', () => {
       createdAt: new Date('2026-01-01'),
       updatedAt: new Date('2026-01-01'),
       exercises: [
-        { id: 10, exerciseId: 2, exerciseName: 'Sentadilla', exerciseNameEn: null, position: 0, targetSets: 5, targetReps: 5, targetRpe: null, restSeconds: 90 },
-        { id: 11, exerciseId: 1, exerciseName: 'Press banca', exerciseNameEn: 'Bench Press', position: 1, targetSets: 3, targetReps: 8, targetRpe: 8, restSeconds: 120 },
+        { id: 10, exerciseId: 2, exerciseName: 'Sentadilla', exerciseNameEn: null, muscleGroup: 'quadriceps', secondaryMuscleGroups: ['glutes'], position: 0, targetSets: 5, targetReps: 5, targetRpe: null, restSeconds: 90 },
+        { id: 11, exerciseId: 1, exerciseName: 'Press banca', exerciseNameEn: 'Bench Press', muscleGroup: 'chest', secondaryMuscleGroups: ['triceps', 'shoulders'], position: 1, targetSets: 3, targetReps: 8, targetRpe: 8, restSeconds: 120 },
       ],
     };
     let counter = 0;

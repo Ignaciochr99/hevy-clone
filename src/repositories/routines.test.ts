@@ -129,8 +129,18 @@ describe('routines.getById y list', () => {
     const b = routines.create({ name: 'B', exercises: [] });
 
     expect(routines.list()).toEqual([
-      { id: b.id, name: 'B', updatedAt: b.updatedAt, exerciseCount: 0, totalSets: 0 },
-      { id: a.id, name: 'A', updatedAt: a.updatedAt, exerciseCount: 2, totalSets: 6 },
+      { id: b.id, name: 'B', updatedAt: b.updatedAt, exerciseCount: 0, totalSets: 0, muscleVolume: [] },
+      {
+        id: a.id,
+        name: 'A',
+        updatedAt: a.updatedAt,
+        exerciseCount: 2,
+        totalSets: 6,
+        muscleVolume: [
+          { muscleGroup: 'chest', sets: 3 },
+          { muscleGroup: 'quadriceps', sets: 3 },
+        ],
+      },
     ]);
 
     jest.setSystemTime(new Date('2026-01-01T10:02:00.000Z'));
@@ -376,5 +386,71 @@ describe('routines: RPE, descanso y total de series', () => {
     routines.create({ name: 'B', exercises: [] });
     const totals = Object.fromEntries(routines.list().map((r) => [r.name, r.totalSets]));
     expect(totals).toEqual({ A: 11, B: 0 });
+  });
+});
+
+describe('routines: series por músculo', () => {
+  function setupMuscles() {
+    const { exercises, routines } = setup();
+    const press = exercises.create({
+      name: 'Press',
+      muscleGroup: 'chest',
+      secondaryMuscleGroups: ['triceps', 'shoulders'],
+      equipment: 'barbell',
+      type: 'weight_reps',
+    });
+    const dip = exercises.create({
+      name: 'Fondos',
+      muscleGroup: 'triceps',
+      secondaryMuscleGroups: ['chest', 'shoulders'],
+      equipment: 'bodyweight',
+      type: 'reps_only',
+    });
+    const curl = exercises.create({
+      name: 'Curl',
+      muscleGroup: 'biceps',
+      equipment: 'dumbbell',
+      type: 'weight_reps',
+    });
+    return { routines, press, dip, curl };
+  }
+
+  test('cada ejercicio de una rutina devuelve su grupo principal y sus secundarios', () => {
+    const { routines, press } = setupMuscles();
+    const routine = routines.create({
+      name: 'A',
+      exercises: [{ exerciseId: press.id, targetSets: 3, targetReps: 10 }],
+    });
+    expect(routine.exercises[0]).toMatchObject({
+      muscleGroup: 'chest',
+      secondaryMuscleGroups: ['triceps', 'shoulders'],
+    });
+  });
+
+  test('list calcula las series por músculo de cada rutina, sin mezclarlas', () => {
+    const { routines, press, dip, curl } = setupMuscles();
+    routines.create({
+      name: 'Empuje',
+      exercises: [
+        { exerciseId: press.id, targetSets: 3, targetReps: 10 },
+        { exerciseId: dip.id, targetSets: 4, targetReps: 8 },
+      ],
+    });
+    routines.create({
+      name: 'Brazos',
+      exercises: [{ exerciseId: curl.id, targetSets: 3, targetReps: 12 }],
+    });
+    routines.create({ name: 'Vacía', exercises: [] });
+
+    const volumes = Object.fromEntries(routines.list().map((r) => [r.name, r.muscleVolume]));
+    expect(volumes).toEqual({
+      Empuje: [
+        { muscleGroup: 'triceps', sets: 5.5 },
+        { muscleGroup: 'chest', sets: 5 },
+        { muscleGroup: 'shoulders', sets: 3.5 },
+      ],
+      Brazos: [{ muscleGroup: 'biceps', sets: 3 }],
+      Vacía: [],
+    });
   });
 });
