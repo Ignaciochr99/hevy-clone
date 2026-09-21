@@ -18,13 +18,13 @@ describe('translate', () => {
   });
 
   test('sustituye los marcadores por los datos', () => {
-    expect(translate('es', 'workoutDetail.title', { id: 7 })).toBe('Entrenamiento #7');
+    expect(translate('es', 'routines.exerciseCount.other', { count: 7 })).toBe('7 ejercicios');
     expect(translate('en', 'form.deleteConfirm', { name: 'Mi press' })).toBe('Delete "Mi press"?');
   });
 
   test('deja el marcador tal cual si falta el dato', () => {
-    expect(translate('en', 'workoutDetail.title')).toBe('Workout #{id}');
-    expect(translate('en', 'workoutDetail.title', { other: 1 })).toBe('Workout #{id}');
+    expect(translate('en', 'routines.exerciseCount.other')).toBe('{count} exercises');
+    expect(translate('en', 'routines.exerciseCount.other', { other: 1 })).toBe('{count} exercises');
   });
 });
 
