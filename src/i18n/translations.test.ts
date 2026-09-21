@@ -1,6 +1,7 @@
 import { EQUIPMENT, EXERCISE_TYPES, MUSCLE_GROUPS } from '../db/enums';
 import { REPOSITORY_ERROR_CODES, RepositoryError } from '../repositories/errors';
 import {
+  muscleVolumeSummary,
   routineSummary,
   translate,
   translateError,
@@ -82,5 +83,21 @@ describe('routineSummary', () => {
     ['en', 0, 0, '0 exercises · 0 sets'],
   ] as const)('%s: %p ejercicios y %p series', (language, exercises, sets, expected) => {
     expect(routineSummary(language, exercises, sets)).toBe(expected);
+  });
+});
+
+describe('muscleVolumeSummary', () => {
+  const volume = [
+    { muscleGroup: 'chest', sets: 9 },
+    { muscleGroup: 'triceps', sets: 4.5 },
+  ] as const;
+
+  test('escribe cada músculo con sus series, separados por un punto medio', () => {
+    expect(muscleVolumeSummary('es', volume)).toBe('Pecho 9 · Tríceps 4,5');
+    expect(muscleVolumeSummary('en', volume)).toBe('Chest 9 · Triceps 4.5');
+  });
+
+  test('sin músculos devuelve un texto vacío', () => {
+    expect(muscleVolumeSummary('es', [])).toBe('');
   });
 });

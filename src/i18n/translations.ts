@@ -1,4 +1,6 @@
 import { repositoryErrorCode } from '../repositories/errors';
+import type { MuscleVolume } from '../utils/muscleVolume';
+import { formatNumber } from '../utils/format';
 import type { Language } from './language';
 
 // Diccionario en español: define qué claves existen. El de inglés se declara
@@ -22,6 +24,8 @@ const es = {
   'routines.setCount.other': '{count} series',
   'routineEditor.rpe': 'RPE',
   'routineEditor.rest': 'Descanso',
+  'routines.muscleVolume': 'Series por músculo',
+  'routines.muscleVolumeHint': 'Grupo principal: 1 por serie · secundario: 0,5 por serie',
   'routines.pickHeader': 'Elegir ejercicio',
   'routineEditor.editHeader': 'Rutina',
   'routineEditor.name': 'Nombre de la rutina',
@@ -132,6 +136,8 @@ const en: Record<TranslationKey, string> = {
   'routines.setCount.other': '{count} sets',
   'routineEditor.rpe': 'RPE',
   'routineEditor.rest': 'Rest',
+  'routines.muscleVolume': 'Sets per muscle',
+  'routines.muscleVolumeHint': 'Primary muscle: 1 per set · secondary: 0.5 per set',
   'routines.pickHeader': 'Choose exercise',
   'routineEditor.editHeader': 'Routine',
   'routineEditor.name': 'Routine name',
@@ -261,4 +267,14 @@ export function routineSummary(language: Language, exercises: number, sets: numb
     { count: sets },
   );
   return `${exerciseText} · ${setText}`;
+}
+
+// "Pecho 9 · Tríceps 4,5": las series de cada músculo, de más a menos.
+export function muscleVolumeSummary(language: Language, volume: readonly MuscleVolume[]): string {
+  return volume
+    .map(
+      (item) =>
+        `${translate(language, `muscle.${item.muscleGroup}`)} ${formatNumber(item.sets, language)}`,
+    )
+    .join(' · ');
 }

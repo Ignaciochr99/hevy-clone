@@ -6,13 +6,14 @@ import { IconButton } from '../../components/IconButton';
 import { Screen } from '../../components/Screen';
 import { Stepper } from '../../components/Stepper';
 import { TextField } from '../../components/TextField';
-import { routineSummary, translateError } from '../../i18n/translations';
+import { muscleVolumeSummary, routineSummary, translateError } from '../../i18n/translations';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { RoutinesStackParamList } from '../../navigation/types';
 import { repositories } from '../../repositories';
 import { colors, fontSize, spacing } from '../../theme';
 import { exerciseDisplayName } from '../../utils/exerciseName';
 import { formatRpe } from '../../utils/format';
+import { muscleVolume } from '../../utils/muscleVolume';
 import {
   addItem,
   fromRoutine,
@@ -52,6 +53,7 @@ export function RoutineEditorScreen({ navigation, route }: Props) {
   );
   const [error, setError] = useState<string>();
   const summary = summarize(items);
+  const volume = muscleVolume(items);
 
   // Al elegir un ejercicio en el selector se vuelve aquí con `pickedExerciseId`.
   // Lo añadimos al borrador y limpiamos el parámetro para no añadirlo otra vez.
@@ -119,7 +121,14 @@ export function RoutineEditorScreen({ navigation, route }: Props) {
         {items.length === 0 ? (
           <Text style={styles.empty}>{t('routineEditor.noExercises')}</Text>
         ) : (
-          <Text style={styles.summary}>{routineSummary(language, summary.exercises, summary.sets)}</Text>
+          <View style={styles.summaryBox}>
+            <Text style={styles.summary}>
+              {routineSummary(language, summary.exercises, summary.sets)}
+            </Text>
+            <Text style={styles.summaryTitle}>{t('routines.muscleVolume')}</Text>
+            <Text style={styles.summaryText}>{muscleVolumeSummary(language, volume)}</Text>
+            <Text style={styles.summaryHint}>{t('routines.muscleVolumeHint')}</Text>
+          </View>
         )}
 
         {items.map((item, index) => (
@@ -215,7 +224,11 @@ const styles = StyleSheet.create({
   },
   error: { color: colors.danger, fontSize: fontSize.body, marginTop: spacing.sm },
   empty: { color: colors.textMuted, fontSize: fontSize.body },
+  summaryBox: { gap: spacing.xs },
   summary: { color: colors.primary, fontSize: fontSize.body, fontWeight: '600' },
+  summaryTitle: { color: colors.textMuted, fontSize: fontSize.body - 2, marginTop: spacing.xs },
+  summaryText: { color: colors.text, fontSize: fontSize.body },
+  summaryHint: { color: colors.textMuted, fontSize: fontSize.body - 4 },
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,

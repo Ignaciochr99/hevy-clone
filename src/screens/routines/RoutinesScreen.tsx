@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text } from 'react-native';
 import { Button } from '../../components/Button';
 import { Screen } from '../../components/Screen';
-import { routineSummary } from '../../i18n/translations';
+import { muscleVolumeSummary, routineSummary } from '../../i18n/translations';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { RoutinesStackParamList } from '../../navigation/types';
 import { repositories } from '../../repositories';
@@ -47,6 +47,9 @@ export function RoutinesScreen({ navigation }: Props) {
             <Text style={styles.meta}>
               {routineSummary(language, item.exerciseCount, item.totalSets)}
             </Text>
+            {item.muscleVolume.length > 0 ? (
+              <Text style={styles.meta}>{muscleVolumeSummary(language, item.muscleVolume)}</Text>
+            ) : null}
           </Pressable>
         )}
       />
