@@ -241,3 +241,102 @@ describe('createActiveWorkoutStore: recuperación tras cerrar la app', () => {
     expect(ctx.repo.getActive()).toEqual(reopened.getState().workout);
   });
 });
+
+describe('createActiveWorkoutStore: descanso', () => {
+  // Un reloj inyectado: el test decide qué hora es.
+  function withClock() {
+    const ctx = setup();
+    let time = 1_000_000;
+    const store = createActiveWorkoutStore(ctx.repo, () => time);
+    store.getState().startFromRoutine(ctx.routine.id);
+    const [bench, squat] = store.getState().workout!.exercises;
+    return { ...ctx, store, bench, squat, advance: (ms: number) => (time += ms), now: () => time };
+  }
+
+  test('al empezar no hay descanso', () => {
+    expect(withClock().store.getState().rest).toBeNull();
+  });
+
+  test('completar una serie arranca el descanso de su ejercicio', () => {
+    const ctx = withClock();
+    ctx.store.getState().updateSet(ctx.bench.sets[0].id, { weight: 80, completed: true });
+    expect(ctx.store.getState().rest).toEqual({ endsAt: ctx.now() + 120_000 });
+
+    // Otro ejercicio, otro descanso (el de Sentadilla es el de por defecto, 90 s).
+    ctx.advance(10_000);
+    ctx.store.getState().updateSet(ctx.squat.sets[0].id, { completed: true });
+    expect(ctx.store.getState().rest).toEqual({ endsAt: ctx.now() + 90_000 });
+  });
+
+  test('editar el peso de una serie sin completarla no arranca nada', () => {
+    const ctx = withClock();
+    ctx.store.getState().updateSet(ctx.bench.sets[0].id, { weight: 80, reps: 8 });
+    expect(ctx.store.getState().rest).toBeNull();
+  });
+
+  test('solo arranca al pasar de no completada a completada', () => {
+    const ctx = withClock();
+    const setId = ctx.bench.sets[0].id;
+    ctx.store.getState().updateSet(setId, { completed: true });
+    const started = ctx.store.getState().rest;
+
+    // Editar una serie que ya estaba completada no reinicia el descanso.
+    ctx.advance(30_000);
+    ctx.store.getState().updateSet(setId, { weight: 85 });
+    expect(ctx.store.getState().rest).toBe(started);
+
+    // Descompletarla tampoco lo arranca (ni lo quita).
+    ctx.store.getState().updateSet(setId, { completed: false });
+    expect(ctx.store.getState().rest).toBe(started);
+
+    // Y volver a completarla sí empieza uno nuevo.
+    ctx.store.getState().updateSet(setId, { completed: true });
+    expect(ctx.store.getState().rest).toEqual({ endsAt: ctx.now() + 120_000 });
+  });
+
+  test('con descanso 0 no arranca', () => {
+    const ctx = withClock();
+    ctx.store.getState().addExercise(ctx.bench.exerciseId, 0);
+    const added = ctx.store.getState().workout!.exercises[2];
+    ctx.store.getState().updateSet(added.sets[0].id, { completed: true });
+    expect(ctx.store.getState().rest).toBeNull();
+  });
+
+  test('si falla la escritura, no arranca el descanso', () => {
+    const ctx = withClock();
+    expect(() => ctx.store.getState().updateSet(ctx.bench.sets[0].id, { reps: -1, completed: true })).toThrow();
+    expect(ctx.store.getState().rest).toBeNull();
+  });
+
+  test('skipRest lo quita', () => {
+    const ctx = withClock();
+    ctx.store.getState().updateSet(ctx.bench.sets[0].id, { completed: true });
+    ctx.store.getState().skipRest();
+    expect(ctx.store.getState().rest).toBeNull();
+  });
+
+  test('adjustRest suma o resta segundos; sin descanso no hace nada', () => {
+    const ctx = withClock();
+    ctx.store.getState().adjustRest(15);
+    expect(ctx.store.getState().rest).toBeNull();
+
+    ctx.store.getState().updateSet(ctx.bench.sets[0].id, { completed: true });
+    ctx.store.getState().adjustRest(15);
+    expect(ctx.store.getState().rest).toEqual({ endsAt: ctx.now() + 135_000 });
+    ctx.store.getState().adjustRest(-15);
+    ctx.store.getState().adjustRest(-15);
+    expect(ctx.store.getState().rest).toEqual({ endsAt: ctx.now() + 105_000 });
+  });
+
+  test('finish y discard cancelan el descanso', () => {
+    const finishing = withClock();
+    finishing.store.getState().updateSet(finishing.bench.sets[0].id, { completed: true });
+    finishing.store.getState().finish();
+    expect(finishing.store.getState().rest).toBeNull();
+
+    const discarding = withClock();
+    discarding.store.getState().updateSet(discarding.bench.sets[0].id, { completed: true });
+    discarding.store.getState().discard();
+    expect(discarding.store.getState().rest).toBeNull();
+  });
+});
