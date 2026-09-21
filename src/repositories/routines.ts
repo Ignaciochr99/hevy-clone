@@ -1,6 +1,7 @@
 import { asc, count, desc, eq } from 'drizzle-orm';
 import { exercises, routineExercises, routines } from '../db/schema';
 import type { Database } from '../db/types';
+import { RepositoryError } from './errors';
 
 export type RoutineExerciseInput = {
   exerciseId: number;
@@ -41,14 +42,14 @@ export type RoutineSummary = {
 function validate(input: RoutineInput): string {
   const name = input.name.trim();
   if (name === '') {
-    throw new Error('El nombre de la rutina no puede estar vacío');
+    throw new RepositoryError('routine.nameEmpty', 'El nombre de la rutina no puede estar vacío');
   }
   for (const item of input.exercises) {
     if (!Number.isInteger(item.targetSets) || item.targetSets < 1) {
-      throw new Error('Las series objetivo deben ser un entero mayor que 0');
+      throw new RepositoryError('routine.invalidSets', 'Las series objetivo deben ser un entero mayor que 0');
     }
     if (!Number.isInteger(item.targetReps) || item.targetReps < 1) {
-      throw new Error('Las repeticiones objetivo deben ser un entero mayor que 0');
+      throw new RepositoryError('routine.invalidReps', 'Las repeticiones objetivo deben ser un entero mayor que 0');
     }
   }
   return name;
@@ -98,7 +99,7 @@ export function createRoutinesRepository(db: Database) {
   function getByIdOrThrow(id: number): Routine {
     const routine = getById(id);
     if (!routine) {
-      throw new Error('Rutina no encontrada');
+      throw new RepositoryError('routine.notFound', 'Rutina no encontrada');
     }
     return routine;
   }
@@ -148,7 +149,7 @@ export function createRoutinesRepository(db: Database) {
           .returning({ id: routines.id })
           .get();
         if (!updated) {
-          throw new Error('Rutina no encontrada');
+          throw new RepositoryError('routine.notFound', 'Rutina no encontrada');
         }
         tx.delete(routineExercises).where(eq(routineExercises.routineId, id)).run();
         insertExercises(tx, id, input.exercises);
@@ -164,7 +165,7 @@ export function createRoutinesRepository(db: Database) {
         .returning({ id: routines.id })
         .get();
       if (!deleted) {
-        throw new Error('Rutina no encontrada');
+        throw new RepositoryError('routine.notFound', 'Rutina no encontrada');
       }
     },
   };

@@ -1,7 +1,9 @@
 import { createTestDb } from '../db/createTestDb';
 import { routineExercises } from '../db/schema';
+import { repositoryErrorCode } from './errors';
 import { createExercisesRepository } from './exercises';
 import { createRoutinesRepository } from './routines';
+import { catchError } from './testHelpers';
 
 const T0 = new Date('2026-01-01T10:00:00.000Z');
 
@@ -221,5 +223,36 @@ describe('routines.remove', () => {
   test('falla si la rutina no existe', () => {
     const { routines } = setup();
     expect(() => routines.remove(999)).toThrow('no encontrada');
+  });
+});
+
+describe('routines: errores con código', () => {
+  test('nombre vacío', () => {
+    const { routines } = setup();
+    expect(repositoryErrorCode(catchError(() => routines.create({ name: ' ', exercises: [] })))).toBe(
+      'routine.nameEmpty',
+    );
+  });
+
+  test('series y repeticiones inválidas', () => {
+    const { routines, bench } = setup();
+    const withTarget = (targetSets: number, targetReps: number) => () =>
+      routines.create({ name: 'X', exercises: [{ exerciseId: bench.id, targetSets, targetReps }] });
+    expect(repositoryErrorCode(catchError(withTarget(0, 10)))).toBe('routine.invalidSets');
+    expect(repositoryErrorCode(catchError(withTarget(3, 0)))).toBe('routine.invalidReps');
+  });
+
+  test('rutina inexistente', () => {
+    const { routines } = setup();
+    expect(repositoryErrorCode(catchError(() => routines.update(999, { name: 'X', exercises: [] })))).toBe(
+      'routine.notFound',
+    );
+    expect(repositoryErrorCode(catchError(() => routines.remove(999)))).toBe('routine.notFound');
+  });
+
+  test('ejercicio usado por una rutina', () => {
+    const { exercises, routines, bench } = setup();
+    routines.create({ name: 'Pecho', exercises: [{ exerciseId: bench.id, targetSets: 3, targetReps: 10 }] });
+    expect(repositoryErrorCode(catchError(() => exercises.remove(bench.id)))).toBe('exercise.inUse');
   });
 });

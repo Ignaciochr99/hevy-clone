@@ -1,6 +1,8 @@
 import { createTestDb } from '../db/createTestDb';
 import { seedExercises } from '../db/seed';
+import { repositoryErrorCode } from './errors';
 import { createExercisesRepository, type ExerciseInput } from './exercises';
+import { catchError } from './testHelpers';
 
 const pressBanca: ExerciseInput = {
   name: 'Press banca',
@@ -167,5 +169,30 @@ describe('exercises.list con filtros', () => {
 
   test('sin coincidencias devuelve una lista vacía', () => {
     expect(setupFiltered().list({ search: 'zzz' })).toEqual([]);
+  });
+});
+
+describe('exercises: errores con código', () => {
+  test('nombre vacío', () => {
+    const { exercises } = setup();
+    expect(repositoryErrorCode(catchError(() => exercises.create({ ...pressBanca, name: ' ' })))).toBe(
+      'exercise.nameEmpty',
+    );
+  });
+
+  test('ejercicio inexistente', () => {
+    const { exercises } = setup();
+    expect(repositoryErrorCode(catchError(() => exercises.update(999, { name: 'X' })))).toBe('exercise.notFound');
+    expect(repositoryErrorCode(catchError(() => exercises.remove(999)))).toBe('exercise.notFound');
+  });
+
+  test('ejercicio de la biblioteca', () => {
+    const { db, exercises } = setup();
+    seedExercises(db);
+    const [library] = exercises.list();
+    expect(repositoryErrorCode(catchError(() => exercises.update(library.id, { name: 'X' })))).toBe(
+      'exercise.libraryReadOnly',
+    );
+    expect(repositoryErrorCode(catchError(() => exercises.remove(library.id)))).toBe('exercise.libraryReadOnly');
   });
 });

@@ -2,6 +2,7 @@ import { and, count, eq, sql } from 'drizzle-orm';
 import type { Equipment, ExerciseType, MuscleGroup } from '../db/enums';
 import { exercises, routineExercises } from '../db/schema';
 import type { Database } from '../db/types';
+import { RepositoryError } from './errors';
 import { normalizeSearch } from '../utils/text';
 
 export type Exercise = typeof exercises.$inferSelect;
@@ -22,7 +23,7 @@ export type ExerciseFilters = {
 function cleanName(name: string): string {
   const trimmed = name.trim();
   if (trimmed === '') {
-    throw new Error('El nombre del ejercicio no puede estar vacío');
+    throw new RepositoryError('exercise.nameEmpty', 'El nombre del ejercicio no puede estar vacío');
   }
   return trimmed;
 }
@@ -36,10 +37,10 @@ export function createExercisesRepository(db: Database) {
   function getCustomOrThrow(id: number): Exercise {
     const exercise = getById(id);
     if (!exercise) {
-      throw new Error('Ejercicio no encontrado');
+      throw new RepositoryError('exercise.notFound', 'Ejercicio no encontrado');
     }
     if (!exercise.isCustom) {
-      throw new Error('Los ejercicios de la biblioteca no se pueden modificar');
+      throw new RepositoryError('exercise.libraryReadOnly', 'Los ejercicios de la biblioteca no se pueden modificar');
     }
     return exercise;
   }
@@ -96,7 +97,7 @@ export function createExercisesRepository(db: Database) {
           .where(eq(routineExercises.exerciseId, id))
           .get()?.uses ?? 0;
       if (uses > 0) {
-        throw new Error('El ejercicio se usa en alguna rutina');
+        throw new RepositoryError('exercise.inUse', 'El ejercicio se usa en alguna rutina');
       }
       db.delete(exercises).where(eq(exercises.id, id)).run();
     },
