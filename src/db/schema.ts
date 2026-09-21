@@ -1,5 +1,5 @@
 import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { EQUIPMENT, EXERCISE_TYPES, MUSCLE_GROUPS, type MuscleGroup } from './enums';
+import { EQUIPMENT, EXERCISE_TYPES, MUSCLE_GROUPS, SET_TYPES, type MuscleGroup } from './enums';
 
 export const exercises = sqliteTable('exercises', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -53,3 +53,50 @@ export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
 });
+
+// Un entrenamiento. Mientras no tiene `finished_at` es el entrenamiento en
+// curso (como mucho hay uno). Es una COPIA de la rutina de la que salió: si la
+// rutina se borra, `routine_id` pasa a null y el entrenamiento se conserva.
+export const workouts = sqliteTable('workouts', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  routineId: integer('routine_id').references(() => routines.id, { onDelete: 'set null' }),
+  startedAt: integer('started_at', { mode: 'timestamp_ms' }).notNull(),
+  finishedAt: integer('finished_at', { mode: 'timestamp_ms' }),
+});
+
+export const workoutExercises = sqliteTable(
+  'workout_exercises',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    workoutId: integer('workout_id')
+      .notNull()
+      .references(() => workouts.id, { onDelete: 'cascade' }),
+    exerciseId: integer('exercise_id')
+      .notNull()
+      .references(() => exercises.id, { onDelete: 'restrict' }),
+    position: integer('position').notNull(),
+    // Descanso entre series de este ejercicio, copiado de la rutina (segundos).
+    restSeconds: integer('rest_seconds').notNull().default(90),
+  },
+  (table) => [index('workout_exercises_workout_idx').on(table.workoutId)],
+);
+
+export const sets = sqliteTable(
+  'sets',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    workoutExerciseId: integer('workout_exercise_id')
+      .notNull()
+      .references(() => workoutExercises.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    type: text('type', { enum: SET_TYPES }).notNull().default('normal'),
+    // Peso en kg (la conversión a lb llega en la Fase 9), repeticiones o duración
+    // en segundos, según el tipo del ejercicio. Vacíos hasta que se rellenan.
+    weight: real('weight'),
+    reps: integer('reps'),
+    durationSeconds: integer('duration_seconds'),
+    completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
+  },
+  (table) => [index('sets_workout_exercise_idx').on(table.workoutExerciseId)],
+);

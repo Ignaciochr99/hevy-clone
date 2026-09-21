@@ -29,6 +29,13 @@
       "when": 1790003566467,
       "tag": "0003_routine_exercise_rpe_rest",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790004644619,
+      "tag": "0004_workouts",
+      "breakpoints": true
     }
   ]
 }

@@ -29,3 +29,7 @@ export type Equipment = (typeof EQUIPMENT)[number];
 
 export const EXERCISE_TYPES = ['weight_reps', 'reps_only', 'duration'] as const;
 export type ExerciseType = (typeof EXERCISE_TYPES)[number];
+
+// Tipo de serie de un entrenamiento: normal, de calentamiento o al fallo.
+export const SET_TYPES = ['normal', 'warmup', 'failure'] as const;
+export type SetType = (typeof SET_TYPES)[number];

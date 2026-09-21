@@ -112,6 +112,10 @@ const es = {
   'error.routine.invalidReps': 'Las repeticiones objetivo deben ser un entero mayor que 0',
   'error.routine.invalidRpe': 'El RPE debe estar entre 1 y 10, en pasos de 0,5',
   'error.routine.invalidRest': 'El descanso debe ser un número entero de segundos entre 0 y 3600',
+  'error.workout.notFound': 'Entrenamiento no encontrado',
+  'error.workout.alreadyActive': 'Ya tienes un entrenamiento en curso',
+  'error.workout.nothingCompleted': 'No hay ninguna serie completada',
+  'error.workout.invalidSetValue': 'El valor de la serie no es válido',
   'error.unknown': 'Ocurrió un error inesperado',
 };
 
@@ -224,6 +228,10 @@ const en: Record<TranslationKey, string> = {
   'error.routine.invalidReps': 'Target reps must be a whole number greater than 0',
   'error.routine.invalidRpe': 'RPE must be between 1 and 10, in steps of 0.5',
   'error.routine.invalidRest': 'Rest must be a whole number of seconds between 0 and 3600',
+  'error.workout.notFound': 'Workout not found',
+  'error.workout.alreadyActive': 'You already have a workout in progress',
+  'error.workout.nothingCompleted': 'No sets have been completed',
+  'error.workout.invalidSetValue': 'The set value is not valid',
   'error.unknown': 'An unexpected error occurred',
 };
 

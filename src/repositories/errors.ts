@@ -13,6 +13,10 @@ export const REPOSITORY_ERROR_CODES = [
   'routine.invalidReps',
   'routine.invalidRpe',
   'routine.invalidRest',
+  'workout.notFound',
+  'workout.alreadyActive',
+  'workout.nothingCompleted',
+  'workout.invalidSetValue',
 ] as const;
 
 export type RepositoryErrorCode = (typeof REPOSITORY_ERROR_CODES)[number];
