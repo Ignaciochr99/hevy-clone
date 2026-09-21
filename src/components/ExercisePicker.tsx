@@ -114,7 +114,9 @@ export function ExercisePicker({ onSelect, onCreate }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, gap: spacing.sm },
-  row: { flexGrow: 0 },
+  // ScrollView trae flexShrink: 1 por defecto; sin fijarlo en 0, la lista larga
+  // aplasta las filas de filtros y los chips quedan recortados.
+  row: { flexGrow: 0, flexShrink: 0 },
   chips: { gap: spacing.sm },
   empty: { color: colors.textMuted, fontSize: fontSize.body, marginTop: spacing.lg, textAlign: 'center' },
   item: {
