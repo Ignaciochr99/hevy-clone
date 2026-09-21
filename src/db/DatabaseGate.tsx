@@ -2,6 +2,7 @@ import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import migrations from '../../drizzle/migrations';
+import { useSettings } from '../stores/settings';
 import { colors, fontSize, spacing } from '../theme';
 import { db } from './client';
 import { seedExercises } from './seed';
@@ -22,6 +23,9 @@ export function DatabaseGate({ children }: Props) {
     }
     try {
       seedExercises(db);
+      // Los ajustes (idioma) se leen antes de mostrar la app, para que la
+      // primera pantalla ya salga en el idioma elegido.
+      useSettings.getState().load();
       setSeeded(true);
     } catch (e) {
       setSeedError(e instanceof Error ? e : new Error(String(e)));

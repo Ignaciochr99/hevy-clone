@@ -9,7 +9,7 @@ describe('migraciones', () => {
     const db = createTestDb();
     const exported: unknown[] = Object.values(schema);
     const tables = exported.filter((value): value is SQLiteTable => is(value, SQLiteTable));
-    expect(tables).toHaveLength(3);
+    expect(tables).toHaveLength(4);
 
     for (const table of tables) {
       const config = getTableConfig(table);

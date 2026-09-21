@@ -43,3 +43,9 @@ export const routineExercises = sqliteTable(
   },
   (table) => [index('routine_exercises_routine_idx').on(table.routineId)],
 );
+
+// Ajustes de la app en formato clave-valor (idioma ahora; unidades en la Fase 9).
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+});
