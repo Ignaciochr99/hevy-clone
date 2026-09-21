@@ -1,4 +1,4 @@
-import { formatDuration } from './time';
+import { elapsedSeconds, formatDuration } from './time';
 
 describe('formatDuration', () => {
   test.each([
@@ -25,5 +25,18 @@ describe('formatDuration', () => {
   test('un valor negativo o inválido se trata como cero', () => {
     expect(formatDuration(-5)).toBe('0:00');
     expect(formatDuration(Number.NaN)).toBe('0:00');
+  });
+});
+
+describe('elapsedSeconds', () => {
+  const start = new Date('2026-03-01T10:00:00.000Z');
+
+  test('cuenta los segundos enteros desde el inicio', () => {
+    expect(elapsedSeconds(start, start.getTime())).toBe(0);
+    expect(elapsedSeconds(start, start.getTime() + 61_500)).toBe(61);
+  });
+
+  test('nunca es negativo (por ejemplo, si cambia el reloj del teléfono)', () => {
+    expect(elapsedSeconds(start, start.getTime() - 5_000)).toBe(0);
   });
 });

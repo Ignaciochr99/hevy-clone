@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { colors, fontSize, spacing } from '../theme';
 
-type Props = { title: string; onPress: () => void; variant?: 'primary' | 'danger' };
+type Props = { title: string; onPress: () => void; variant?: 'primary' | 'secondary' | 'danger' };
 
 export function Button({ title, onPress, variant = 'primary' }: Props) {
   return (
@@ -10,6 +10,7 @@ export function Button({ title, onPress, variant = 'primary' }: Props) {
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
+        variant === 'secondary' && styles.secondary,
         variant === 'danger' && styles.danger,
         pressed && styles.pressed,
       ]}
@@ -27,6 +28,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     alignItems: 'center',
   },
+  secondary: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
   danger: { backgroundColor: colors.danger },
   pressed: { opacity: 0.7 },
   label: { color: colors.onPrimary, fontSize: fontSize.body, fontWeight: '600' },

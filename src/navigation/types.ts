@@ -23,3 +23,12 @@ export type RootTabParamList = {
   RoutinesTab: undefined;
   ProfileTab: undefined;
 };
+
+// El stack raíz: las pestañas y, encima de ellas, el entrenamiento en curso
+// (como modal), el selector de ejercicios para añadir y el formulario de ejercicio.
+export type RootStackParamList = {
+  Tabs: undefined;
+  Workout: undefined;
+  WorkoutPickExercise: undefined;
+  ExerciseForm: { exerciseId?: number };
+};

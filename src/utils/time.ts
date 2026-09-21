@@ -11,3 +11,10 @@ export function formatDuration(totalSeconds: number): string {
   }
   return `${minutes}:${rest}`;
 }
+
+// Segundos enteros transcurridos desde `start` hasta `now` (milisegundos).
+// Se calcula siempre a partir de la hora de inicio, no contando ticks: así el
+// cronómetro es correcto aunque la app haya estado en segundo plano.
+export function elapsedSeconds(start: Date, now: number): number {
+  return Math.max(0, Math.floor((now - start.getTime()) / 1000));
+}
