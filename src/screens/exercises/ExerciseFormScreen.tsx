@@ -16,12 +16,13 @@ import {
 } from '../../db/enums';
 import { translateError } from '../../i18n/translations';
 import { useTranslation } from '../../i18n/useTranslation';
-import type { ProfileStackParamList } from '../../navigation/types';
 import { repositories } from '../../repositories';
 import { colors, fontSize, spacing } from '../../theme';
 import { exerciseDisplayName } from '../../utils/exerciseName';
 
-type Props = NativeStackScreenProps<ProfileStackParamList, 'ExerciseForm'>;
+// Este formulario se usa en dos stacks (Perfil y Rutinas), así que se tipa
+// contra una lista mínima de rutas que ambos cumplen.
+type Props = NativeStackScreenProps<{ ExerciseForm: { exerciseId?: number } }, 'ExerciseForm'>;
 
 export function ExerciseFormScreen({ navigation, route }: Props) {
   const { t, language } = useTranslation();
