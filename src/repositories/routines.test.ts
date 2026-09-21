@@ -129,8 +129,8 @@ describe('routines.getById y list', () => {
     const b = routines.create({ name: 'B', exercises: [] });
 
     expect(routines.list()).toEqual([
-      { id: b.id, name: 'B', updatedAt: b.updatedAt, exerciseCount: 0 },
-      { id: a.id, name: 'A', updatedAt: a.updatedAt, exerciseCount: 2 },
+      { id: b.id, name: 'B', updatedAt: b.updatedAt, exerciseCount: 0, totalSets: 0 },
+      { id: a.id, name: 'A', updatedAt: a.updatedAt, exerciseCount: 2, totalSets: 6 },
     ]);
 
     jest.setSystemTime(new Date('2026-01-01T10:02:00.000Z'));
@@ -291,5 +291,90 @@ describe('routines: nombre del ejercicio en inglés', () => {
       exercises: [{ exerciseId: bench.id, targetSets: 3, targetReps: 10 }],
     });
     expect(routine.exercises[0].exerciseNameEn).toBeNull();
+  });
+});
+
+describe('routines: RPE, descanso y total de series', () => {
+  test('sin indicarlos, el RPE queda vacío y el descanso es de 90 segundos', () => {
+    const { routines, bench } = setup();
+    const routine = routines.create({
+      name: 'A',
+      exercises: [{ exerciseId: bench.id, targetSets: 3, targetReps: 10 }],
+    });
+    expect(routine.exercises[0]).toMatchObject({ targetRpe: null, restSeconds: 90 });
+  });
+
+  test('se guardan y se leen', () => {
+    const { routines, bench, squat } = setup();
+    const routine = routines.create({
+      name: 'A',
+      exercises: [
+        { exerciseId: bench.id, targetSets: 3, targetReps: 10, targetRpe: 8.5, restSeconds: 120 },
+        { exerciseId: squat.id, targetSets: 5, targetReps: 5, targetRpe: null, restSeconds: 0 },
+      ],
+    });
+    expect(routines.getById(routine.id)?.exercises.map((e) => [e.targetRpe, e.restSeconds])).toEqual([
+      [8.5, 120],
+      [null, 0],
+    ]);
+  });
+
+  test('update los reemplaza', () => {
+    const { routines, bench } = setup();
+    const created = routines.create({
+      name: 'A',
+      exercises: [{ exerciseId: bench.id, targetSets: 3, targetReps: 10, targetRpe: 7, restSeconds: 60 }],
+    });
+    const updated = routines.update(created.id, {
+      name: 'A',
+      exercises: [{ exerciseId: bench.id, targetSets: 3, targetReps: 10, targetRpe: 9, restSeconds: 180 }],
+    });
+    expect(updated.exercises[0]).toMatchObject({ targetRpe: 9, restSeconds: 180 });
+  });
+
+  test.each([0, 0.5, 10.5, 11, 8.25, -1, Number.NaN])('rechaza el RPE %p', (targetRpe) => {
+    const { routines, bench } = setup();
+    const error = catchError(() =>
+      routines.create({
+        name: 'A',
+        exercises: [{ exerciseId: bench.id, targetSets: 3, targetReps: 10, targetRpe }],
+      }),
+    );
+    expect(repositoryErrorCode(error)).toBe('routine.invalidRpe');
+  });
+
+  test.each([1, 5.5, 6.5, 7, 8, 9.5, 10])('acepta el RPE %p', (targetRpe) => {
+    const { routines, bench } = setup();
+    const routine = routines.create({
+      name: 'A',
+      exercises: [{ exerciseId: bench.id, targetSets: 3, targetReps: 10, targetRpe }],
+    });
+    expect(routine.exercises[0].targetRpe).toBe(targetRpe);
+  });
+
+  test.each([-1, 1.5, 3601, Number.NaN])('rechaza el descanso %p', (restSeconds) => {
+    const { routines, bench } = setup();
+    const error = catchError(() =>
+      routines.create({
+        name: 'A',
+        exercises: [{ exerciseId: bench.id, targetSets: 3, targetReps: 10, restSeconds }],
+      }),
+    );
+    expect(repositoryErrorCode(error)).toBe('routine.invalidRest');
+  });
+
+  test('list suma las series objetivo de cada rutina', () => {
+    const { routines, bench, squat } = setup();
+    routines.create({
+      name: 'A',
+      exercises: [
+        { exerciseId: bench.id, targetSets: 4, targetReps: 8 },
+        { exerciseId: squat.id, targetSets: 5, targetReps: 5 },
+        { exerciseId: bench.id, targetSets: 2, targetReps: 12 },
+      ],
+    });
+    routines.create({ name: 'B', exercises: [] });
+    const totals = Object.fromEntries(routines.list().map((r) => [r.name, r.totalSets]));
+    expect(totals).toEqual({ A: 11, B: 0 });
   });
 });

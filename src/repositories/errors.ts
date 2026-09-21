@@ -11,6 +11,8 @@ export const REPOSITORY_ERROR_CODES = [
   'routine.notFound',
   'routine.invalidSets',
   'routine.invalidReps',
+  'routine.invalidRpe',
+  'routine.invalidRest',
 ] as const;
 
 export type RepositoryErrorCode = (typeof REPOSITORY_ERROR_CODES)[number];

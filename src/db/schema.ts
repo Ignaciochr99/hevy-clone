@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { EQUIPMENT, EXERCISE_TYPES, MUSCLE_GROUPS, type MuscleGroup } from './enums';
 
 export const exercises = sqliteTable('exercises', {
@@ -40,6 +40,10 @@ export const routineExercises = sqliteTable(
     position: integer('position').notNull(),
     targetSets: integer('target_sets').notNull(),
     targetReps: integer('target_reps').notNull(),
+    // RPE objetivo (1 a 10, en pasos de 0,5); null si no se fija.
+    targetRpe: real('target_rpe'),
+    // Descanso entre series, en segundos. 90 debe coincidir con DEFAULT_REST_SECONDS.
+    restSeconds: integer('rest_seconds').notNull().default(90),
   },
   (table) => [index('routine_exercises_routine_idx').on(table.routineId)],
 );

@@ -1,12 +1,20 @@
-import { asc, count, desc, eq } from 'drizzle-orm';
+import { asc, count, desc, eq, sql } from 'drizzle-orm';
 import { exercises, routineExercises, routines } from '../db/schema';
 import type { Database } from '../db/types';
 import { RepositoryError } from './errors';
+
+// Descanso por defecto entre series (debe coincidir con el DEFAULT de la columna).
+export const DEFAULT_REST_SECONDS = 90;
+export const MAX_REST_SECONDS = 3600;
 
 export type RoutineExerciseInput = {
   exerciseId: number;
   targetSets: number;
   targetReps: number;
+  // RPE objetivo: de 1 a 10 en pasos de 0,5, o null si no se fija.
+  targetRpe?: number | null;
+  // Descanso entre series, en segundos (por defecto 90).
+  restSeconds?: number;
 };
 
 export type RoutineInput = {
@@ -22,6 +30,8 @@ export type RoutineExercise = {
   position: number;
   targetSets: number;
   targetReps: number;
+  targetRpe: number | null;
+  restSeconds: number;
 };
 
 export type Routine = {
@@ -37,6 +47,8 @@ export type RoutineSummary = {
   name: string;
   updatedAt: Date;
   exerciseCount: number;
+  // Suma de las series objetivo de todos sus ejercicios.
+  totalSets: number;
 };
 
 // Devuelve el nombre ya limpio.
@@ -51,6 +63,14 @@ function validate(input: RoutineInput): string {
     }
     if (!Number.isInteger(item.targetReps) || item.targetReps < 1) {
       throw new RepositoryError('routine.invalidReps', 'Las repeticiones objetivo deben ser un entero mayor que 0');
+    }
+    const rpe = item.targetRpe ?? null;
+    if (rpe !== null && !(rpe >= 1 && rpe <= 10 && Number.isInteger(rpe * 2))) {
+      throw new RepositoryError('routine.invalidRpe', 'El RPE debe estar entre 1 y 10, en pasos de 0,5');
+    }
+    const rest = item.restSeconds ?? DEFAULT_REST_SECONDS;
+    if (!Number.isInteger(rest) || rest < 0 || rest > MAX_REST_SECONDS) {
+      throw new RepositoryError('routine.invalidRest', 'El descanso debe ser un número entero de segundos entre 0 y 3600');
     }
   }
   return name;
@@ -69,6 +89,8 @@ function insertExercises(db: Database, routineId: number, items: RoutineExercise
         position,
         targetSets: item.targetSets,
         targetReps: item.targetReps,
+        targetRpe: item.targetRpe ?? null,
+        restSeconds: item.restSeconds ?? DEFAULT_REST_SECONDS,
       })),
     )
     .run();
@@ -89,6 +111,8 @@ export function createRoutinesRepository(db: Database) {
         position: routineExercises.position,
         targetSets: routineExercises.targetSets,
         targetReps: routineExercises.targetReps,
+        targetRpe: routineExercises.targetRpe,
+        restSeconds: routineExercises.restSeconds,
       })
       .from(routineExercises)
       .innerJoin(exercises, eq(routineExercises.exerciseId, exercises.id))
@@ -114,6 +138,7 @@ export function createRoutinesRepository(db: Database) {
           name: routines.name,
           updatedAt: routines.updatedAt,
           exerciseCount: count(routineExercises.id),
+          totalSets: sql<number>`coalesce(sum(${routineExercises.targetSets}), 0)`.mapWith(Number),
         })
         .from(routines)
         .leftJoin(routineExercises, eq(routineExercises.routineId, routines.id))

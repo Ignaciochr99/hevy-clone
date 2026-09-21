@@ -102,6 +102,8 @@ const es = {
   'error.routine.notFound': 'Rutina no encontrada',
   'error.routine.invalidSets': 'Las series objetivo deben ser un entero mayor que 0',
   'error.routine.invalidReps': 'Las repeticiones objetivo deben ser un entero mayor que 0',
+  'error.routine.invalidRpe': 'El RPE debe estar entre 1 y 10, en pasos de 0,5',
+  'error.routine.invalidRest': 'El descanso debe ser un número entero de segundos entre 0 y 3600',
   'error.unknown': 'Ocurrió un error inesperado',
 };
 
@@ -206,6 +208,8 @@ const en: Record<TranslationKey, string> = {
   'error.routine.notFound': 'Routine not found',
   'error.routine.invalidSets': 'Target sets must be a whole number greater than 0',
   'error.routine.invalidReps': 'Target reps must be a whole number greater than 0',
+  'error.routine.invalidRpe': 'RPE must be between 1 and 10, in steps of 0.5',
+  'error.routine.invalidRest': 'Rest must be a whole number of seconds between 0 and 3600',
   'error.unknown': 'An unexpected error occurred',
 };
 
