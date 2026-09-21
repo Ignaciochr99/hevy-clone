@@ -1,8 +1,11 @@
-import { and, asc, desc, eq, inArray, isNull, notInArray } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, notInArray } from 'drizzle-orm';
 import { SET_TYPES, type ExerciseType, type SetType } from '../db/enums';
 import { exercises, routineExercises, routines, sets, workoutExercises, workouts } from '../db/schema';
 import type { Database } from '../db/types';
 import { RepositoryError } from './errors';
+import { elapsedSeconds } from '../utils/time';
+import { startOfNextWeek } from '../utils/week';
+import { setVolume } from '../utils/workoutStats';
 import { DEFAULT_REST_SECONDS } from './routines';
 
 export type WorkoutSet = {
@@ -40,6 +43,25 @@ export type Workout = {
 export type SetPatch = Partial<
   Pick<WorkoutSet, 'type' | 'weight' | 'reps' | 'durationSeconds' | 'completed'>
 >;
+
+// Una línea del historial: lo que se ve en la lista de Inicio.
+export type WorkoutSummary = {
+  id: number;
+  name: string;
+  startedAt: Date;
+  finishedAt: Date;
+  durationSeconds: number;
+  exerciseCount: number;
+  setCount: number;
+  // Peso × repeticiones en kg (ver setVolume).
+  volume: number;
+};
+
+export type WeeklySummary = {
+  workoutCount: number;
+  durationSeconds: number;
+  volume: number;
+};
 
 const notFound = () => new RepositoryError('workout.notFound', 'Entrenamiento no encontrado');
 
@@ -102,6 +124,57 @@ function validatePatch(patch: SetPatch): void {
   ) {
     throw invalid();
   }
+}
+
+// Convierte entrenamientos terminados en resúmenes con UNA consulta para todos
+// (no una por entrenamiento). El volumen se calcula con `setVolume`, la misma
+// regla que usan las pantallas, en vez de repetirla en SQL.
+function summarize(db: Database, rows: (typeof workouts.$inferSelect)[]): WorkoutSummary[] {
+  const finished = rows.filter((row): row is typeof row & { finishedAt: Date } => row.finishedAt !== null);
+  if (finished.length === 0) {
+    return [];
+  }
+
+  const lines = db
+    .select({
+      workoutId: workoutExercises.workoutId,
+      workoutExerciseId: workoutExercises.id,
+      setId: sets.id,
+      type: sets.type,
+      weight: sets.weight,
+      reps: sets.reps,
+      completed: sets.completed,
+    })
+    .from(workoutExercises)
+    .leftJoin(sets, eq(sets.workoutExerciseId, workoutExercises.id))
+    .where(
+      inArray(
+        workoutExercises.workoutId,
+        finished.map((row) => row.id),
+      ),
+    )
+    .all();
+
+  return finished.map((row) => {
+    const own = lines.filter((line) => line.workoutId === row.id);
+    return {
+      id: row.id,
+      name: row.name,
+      startedAt: row.startedAt,
+      finishedAt: row.finishedAt,
+      durationSeconds: elapsedSeconds(row.startedAt, row.finishedAt.getTime()),
+      exerciseCount: new Set(own.map((line) => line.workoutExerciseId)).size,
+      setCount: own.filter((line) => line.setId !== null).length,
+      volume: own.reduce((total, line) => {
+        // Un ejercicio sin series sale con las columnas de la serie vacías.
+        if (line.setId === null || line.type === null || line.completed === null) {
+          return total;
+        }
+        const { type, weight, reps, completed } = line;
+        return total + setVolume({ type, weight, reps, completed });
+      }, 0),
+    };
+  });
 }
 
 export function createWorkoutsRepository(db: Database) {
@@ -395,6 +468,53 @@ export function createWorkoutsRepository(db: Database) {
         tx.update(workouts).set({ finishedAt: new Date() }).where(eq(workouts.id, workoutId)).run();
       });
       return getByIdOrThrow(workoutId);
+    },
+
+    // Los últimos `limit` entrenamientos terminados, del más reciente al más antiguo.
+    listFinished(limit: number): WorkoutSummary[] {
+      const rows = db
+        .select()
+        .from(workouts)
+        .where(isNotNull(workouts.finishedAt))
+        .orderBy(desc(workouts.finishedAt), desc(workouts.id))
+        .limit(limit)
+        .all();
+      return summarize(db, rows);
+    },
+
+    // Los entrenamientos terminados que EMPEZARON en la semana que arranca en
+    // `weekStart` (lunes 00:00 incluido, lunes siguiente excluido).
+    weeklySummary(weekStart: Date): WeeklySummary {
+      const rows = db
+        .select()
+        .from(workouts)
+        .where(
+          and(
+            isNotNull(workouts.finishedAt),
+            gte(workouts.startedAt, weekStart),
+            lt(workouts.startedAt, startOfNextWeek(weekStart)),
+          ),
+        )
+        .all();
+      const summaries = summarize(db, rows);
+      return {
+        workoutCount: summaries.length,
+        durationSeconds: summaries.reduce((total, item) => total + item.durationSeconds, 0),
+        volume: summaries.reduce((total, item) => total + item.volume, 0),
+      };
+    },
+
+    // Borra un entrenamiento TERMINADO del historial, con sus ejercicios y
+    // series. El que está en curso se descarta con `discard`, no por aquí.
+    deleteFinished(workoutId: number): void {
+      const deleted = db
+        .delete(workouts)
+        .where(and(eq(workouts.id, workoutId), isNotNull(workouts.finishedAt)))
+        .returning({ id: workouts.id })
+        .get();
+      if (!deleted) {
+        throw notFound();
+      }
     },
 
     // Borra el entrenamiento con todos sus ejercicios y series.

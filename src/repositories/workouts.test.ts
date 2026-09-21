@@ -1,5 +1,5 @@
 import { createTestDb } from '../db/createTestDb';
-import { exercises as exercisesTable } from '../db/schema';
+import { exercises as exercisesTable, sets as setsTable, workoutExercises } from '../db/schema';
 import { repositoryErrorCode } from './errors';
 import { createExercisesRepository } from './exercises';
 import { createRoutinesRepository } from './routines';
@@ -396,5 +396,162 @@ describe('un ejercicio usado en un entrenamiento', () => {
     workouts.finish(started.id);
 
     expect(repositoryErrorCode(catchError(() => exercises.remove(bench.id)))).toBe('exercise.inUse');
+  });
+});
+
+// Crea y termina un entrenamiento con un press de banca de una serie, fijando
+// las horas de inicio y fin con el reloj falso.
+function finishedWorkout(
+  ctx: ReturnType<typeof setup>,
+  options: { name?: string; start: Date; minutes?: number; weight?: number; reps?: number },
+) {
+  jest.setSystemTime(options.start);
+  const started = ctx.workouts.start(options.name ?? 'Entreno');
+  const workout = ctx.workouts.addExercise(started.id, ctx.bench.id);
+  ctx.workouts.updateSet(workout.exercises[0].sets[0].id, {
+    weight: options.weight ?? 100,
+    reps: options.reps ?? 5,
+    completed: true,
+  });
+  jest.setSystemTime(new Date(options.start.getTime() + (options.minutes ?? 60) * 60_000));
+  return ctx.workouts.finish(started.id);
+}
+
+describe('workouts.listFinished', () => {
+  test('sin entrenamientos devuelve una lista vacía', () => {
+    expect(setup().workouts.listFinished(20)).toEqual([]);
+  });
+
+  test('solo los terminados, del más reciente al más antiguo', () => {
+    const ctx = setup();
+    finishedWorkout(ctx, { name: 'Lunes', start: new Date(2026, 8, 21, 10) });
+    finishedWorkout(ctx, { name: 'Miércoles', start: new Date(2026, 8, 23, 10) });
+    finishedWorkout(ctx, { name: 'Martes', start: new Date(2026, 8, 22, 10) });
+    ctx.workouts.start('En curso');
+
+    expect(ctx.workouts.listFinished(20).map((w) => w.name)).toEqual(['Miércoles', 'Martes', 'Lunes']);
+  });
+
+  test('respeta el límite y se queda con los más recientes', () => {
+    const ctx = setup();
+    for (let day = 21; day <= 25; day++) {
+      finishedWorkout(ctx, { name: `Día ${day}`, start: new Date(2026, 8, day, 10) });
+    }
+    expect(ctx.workouts.listFinished(2).map((w) => w.name)).toEqual(['Día 25', 'Día 24']);
+  });
+
+  test('cada resumen lleva fechas, duración, ejercicios, series y volumen', () => {
+    const ctx = setup();
+    const start = new Date(2026, 8, 21, 10);
+    jest.setSystemTime(start);
+    const started = ctx.workouts.start('Pecho');
+    let workout = ctx.workouts.addExercise(started.id, ctx.bench.id);
+    const benchId = workout.exercises[0].id;
+    workout = ctx.workouts.addSet(benchId);
+    workout = ctx.workouts.addSet(benchId);
+    const [warmup, work, skipped] = workout.exercises[0].sets;
+    ctx.workouts.updateSet(warmup.id, { type: 'warmup', weight: 40, reps: 10, completed: true });
+    ctx.workouts.updateSet(work.id, { weight: 100, reps: 5, completed: true });
+    // Sin completar: finish la descarta y no cuenta.
+    ctx.workouts.updateSet(skipped.id, { weight: 100, reps: 5 });
+    workout = ctx.workouts.addExercise(started.id, ctx.plank.id);
+    ctx.workouts.updateSet(workout.exercises[1].sets[0].id, { durationSeconds: 60, completed: true });
+    jest.setSystemTime(new Date(start.getTime() + 75 * 60_000 + 30_000));
+    ctx.workouts.finish(started.id);
+
+    expect(ctx.workouts.listFinished(20)).toEqual([
+      {
+        id: started.id,
+        name: 'Pecho',
+        startedAt: start,
+        finishedAt: new Date(start.getTime() + 75 * 60_000 + 30_000),
+        durationSeconds: 75 * 60 + 30,
+        exerciseCount: 2,
+        setCount: 3,
+        // El calentamiento y la plancha (sin peso) no suman: solo 100 × 5.
+        volume: 500,
+      },
+    ]);
+  });
+});
+
+describe('workouts.weeklySummary', () => {
+  // La semana del lunes 21 al domingo 27 de septiembre de 2026.
+  const week = new Date(2026, 8, 21);
+
+  test('sin entrenamientos devuelve ceros', () => {
+    expect(setup().workouts.weeklySummary(week)).toEqual({ workoutCount: 0, durationSeconds: 0, volume: 0 });
+  });
+
+  test('cuenta y suma solo los entrenamientos de esa semana', () => {
+    const ctx = setup();
+    finishedWorkout(ctx, { start: new Date(2026, 8, 20, 22), minutes: 30 }); // domingo anterior
+    finishedWorkout(ctx, { start: new Date(2026, 8, 22, 10), minutes: 60, weight: 100, reps: 5 });
+    finishedWorkout(ctx, { start: new Date(2026, 8, 26, 18), minutes: 45, weight: 50, reps: 10 });
+    finishedWorkout(ctx, { start: new Date(2026, 8, 28, 10), minutes: 30 }); // lunes siguiente
+    jest.setSystemTime(new Date(2026, 8, 23, 10));
+    ctx.workouts.start('En curso');
+
+    expect(ctx.workouts.weeklySummary(week)).toEqual({
+      workoutCount: 2,
+      durationSeconds: (60 + 45) * 60,
+      volume: 500 + 500,
+    });
+  });
+
+  test('un entrenamiento que empieza justo a las 00:00 del lunes entra; el del lunes siguiente, no', () => {
+    const ctx = setup();
+    finishedWorkout(ctx, { start: new Date(2026, 8, 21, 0, 0, 0) });
+    finishedWorkout(ctx, { start: new Date(2026, 8, 28, 0, 0, 0) });
+    expect(ctx.workouts.weeklySummary(week).workoutCount).toBe(1);
+  });
+
+  test('cuenta por la hora de inicio: uno que empieza el domingo y acaba el lunes es de la semana anterior', () => {
+    const ctx = setup();
+    finishedWorkout(ctx, { start: new Date(2026, 8, 20, 23, 30), minutes: 90 });
+    expect(ctx.workouts.weeklySummary(week).workoutCount).toBe(0);
+    expect(ctx.workouts.weeklySummary(new Date(2026, 8, 14)).workoutCount).toBe(1);
+  });
+});
+
+describe('workouts.deleteFinished', () => {
+  test('borra el entrenamiento terminado con sus ejercicios y series', () => {
+    const ctx = setup();
+    const finished = finishedWorkout(ctx, { start: new Date(2026, 8, 21, 10) });
+    const kept = finishedWorkout(ctx, { name: 'Otro', start: new Date(2026, 8, 22, 10) });
+
+    ctx.workouts.deleteFinished(finished.id);
+
+    expect(ctx.workouts.getById(finished.id)).toBeUndefined();
+    expect(ctx.workouts.listFinished(20).map((w) => w.id)).toEqual([kept.id]);
+    // El otro entrenamiento sigue completo.
+    expect(ctx.workouts.getById(kept.id)?.exercises[0].sets).toHaveLength(1);
+    // Nada suelto en las tablas hijas.
+    expect(ctx.db.select().from(workoutExercises).all()).toHaveLength(1);
+    expect(ctx.db.select().from(setsTable).all()).toHaveLength(1);
+  });
+
+  test('un entrenamiento que no existe falla', () => {
+    const error = catchError(() => setup().workouts.deleteFinished(999));
+    expect(repositoryErrorCode(error)).toBe('workout.notFound');
+  });
+
+  test('el entrenamiento en curso no se borra por aquí', () => {
+    const ctx = setup();
+    const active = ctx.workouts.start('En curso');
+    expect(repositoryErrorCode(catchError(() => ctx.workouts.deleteFinished(active.id)))).toBe(
+      'workout.notFound',
+    );
+    expect(ctx.workouts.getActive()?.id).toBe(active.id);
+  });
+
+  test('un ejercicio propio usado solo en un entrenamiento borrado vuelve a poder borrarse', () => {
+    const ctx = setup();
+    const finished = finishedWorkout(ctx, { start: new Date(2026, 8, 21, 10) });
+    expect(repositoryErrorCode(catchError(() => ctx.exercises.remove(ctx.bench.id)))).toBe('exercise.inUse');
+
+    ctx.workouts.deleteFinished(finished.id);
+    ctx.exercises.remove(ctx.bench.id);
+    expect(ctx.exercises.getById(ctx.bench.id)).toBeUndefined();
   });
 });
