@@ -2,6 +2,7 @@ import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import migrations from '../../drizzle/migrations';
+import { useTranslation } from '../i18n/useTranslation';
 import { useSettings } from '../stores/settings';
 import { colors, fontSize, spacing } from '../theme';
 import { db } from './client';
@@ -13,6 +14,7 @@ type Props = { children: ReactNode };
 // pendientes y luego precarga los ejercicios. Así ninguna pantalla consulta
 // tablas que todavía no existen.
 export function DatabaseGate({ children }: Props) {
+  const { t } = useTranslation();
   const { success, error } = useMigrations(db, migrations);
   const [seeded, setSeeded] = useState(false);
   const [seedError, setSeedError] = useState<Error>();
@@ -36,7 +38,7 @@ export function DatabaseGate({ children }: Props) {
   if (failure) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>No se pudo abrir la base de datos</Text>
+        <Text style={styles.title}>{t('db.errorTitle')}</Text>
         <Text style={styles.message}>{failure.message}</Text>
       </View>
     );

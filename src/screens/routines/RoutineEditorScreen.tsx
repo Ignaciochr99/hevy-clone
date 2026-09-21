@@ -1,5 +1,8 @@
 import { Screen } from '../../components/Screen';
+import { useTranslation } from '../../i18n/useTranslation';
 
 export function RoutineEditorScreen() {
-  return <Screen title="Aquí se creará y editará una rutina" />;
+  const { t } = useTranslation();
+
+  return <Screen title={t('routineEditor.placeholder')} />;
 }

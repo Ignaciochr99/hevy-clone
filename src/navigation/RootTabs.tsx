@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { ComponentProps } from 'react';
+import { useTranslation } from '../i18n/useTranslation';
 import { colors } from '../theme';
 import { HomeStack } from './HomeStack';
 import { ProfileStack } from './ProfileStack';
@@ -18,6 +19,8 @@ const icons: Record<keyof RootTabParamList, { active: IconName; inactive: IconNa
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
 export function RootTabs() {
+  const { t } = useTranslation();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -32,9 +35,13 @@ export function RootTabs() {
         ),
       })}
     >
-      <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: 'Inicio' }} />
-      <Tab.Screen name="RoutinesTab" component={RoutinesStack} options={{ title: 'Rutinas' }} />
-      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'Perfil' }} />
+      <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: t('tabs.home') }} />
+      <Tab.Screen
+        name="RoutinesTab"
+        component={RoutinesStack}
+        options={{ title: t('tabs.routines') }}
+      />
+      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: t('tabs.profile') }} />
     </Tab.Navigator>
   );
 }

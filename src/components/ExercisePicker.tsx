@@ -2,10 +2,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { EQUIPMENT, MUSCLE_GROUPS, type Equipment, type MuscleGroup } from '../db/enums';
+import { useTranslation } from '../i18n/useTranslation';
 import { repositories } from '../repositories';
 import type { Exercise } from '../repositories/exercises';
 import { colors, fontSize, spacing } from '../theme';
-import { EQUIPMENT_LABELS, MUSCLE_GROUP_LABELS } from '../utils/labels';
+import { exerciseDisplayName } from '../utils/exerciseName';
 import { Button } from './Button';
 import { Chip } from './Chip';
 import { TextField } from './TextField';
@@ -17,14 +18,14 @@ type Props = {
 
 type FilterRowProps<T extends string> = {
   options: readonly T[];
-  labels: Record<T, string>;
+  getLabel: (option: T) => string;
   allLabel: string;
   value: T | undefined;
   onChange: (value: T | undefined) => void;
 };
 
 // Fila de filtros con desplazamiento horizontal. Tocar el chip activo lo quita.
-function FilterRow<T extends string>({ options, labels, allLabel, value, onChange }: FilterRowProps<T>) {
+function FilterRow<T extends string>({ options, getLabel, allLabel, value, onChange }: FilterRowProps<T>) {
   return (
     <ScrollView
       horizontal
@@ -36,7 +37,7 @@ function FilterRow<T extends string>({ options, labels, allLabel, value, onChang
       {options.map((option) => (
         <Chip
           key={option}
-          label={labels[option]}
+          label={getLabel(option)}
           selected={value === option}
           onPress={() => onChange(value === option ? undefined : option)}
         />
@@ -46,6 +47,7 @@ function FilterRow<T extends string>({ options, labels, allLabel, value, onChang
 }
 
 export function ExercisePicker({ onSelect, onCreate }: Props) {
+  const { t, language } = useTranslation();
   const [search, setSearch] = useState('');
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>();
   const [equipment, setEquipment] = useState<Equipment>();
@@ -59,9 +61,9 @@ export function ExercisePicker({ onSelect, onCreate }: Props) {
   );
 
   const exercises = useMemo(
-    () => repositories.exercises.list({ search, muscleGroup, equipment }),
+    () => repositories.exercises.list({ search, muscleGroup, equipment, language }),
     // `version` no se usa dentro, pero cambiarlo fuerza a recalcular.
-    [search, muscleGroup, equipment, version],
+    [search, muscleGroup, equipment, language, version],
   );
 
   return (
@@ -69,42 +71,49 @@ export function ExercisePicker({ onSelect, onCreate }: Props) {
       <TextField
         value={search}
         onChangeText={setSearch}
-        placeholder="Buscar ejercicio"
+        placeholder={t('picker.search')}
         autoCorrect={false}
       />
       <FilterRow
         options={MUSCLE_GROUPS}
-        labels={MUSCLE_GROUP_LABELS}
-        allLabel="Todos los músculos"
+        getLabel={(group) => t(`muscle.${group}`)}
+        allLabel={t('picker.allMuscles')}
         value={muscleGroup}
         onChange={setMuscleGroup}
       />
       <FilterRow
         options={EQUIPMENT}
-        labels={EQUIPMENT_LABELS}
-        allLabel="Todo el equipo"
+        getLabel={(item) => t(`equipment.${item}`)}
+        allLabel={t('picker.allEquipment')}
         value={equipment}
         onChange={setEquipment}
       />
-      <Button title="Crear ejercicio propio" onPress={onCreate} />
+      <Button title={t('picker.create')} onPress={onCreate} />
 
       <FlatList
         data={exercises}
         keyExtractor={(item) => String(item.id)}
         keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={<Text style={styles.empty}>No hay ejercicios con esos filtros</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t('picker.empty')}</Text>}
         renderItem={({ item }) => (
           <Pressable
             onPress={() => onSelect(item)}
             style={({ pressed }) => [styles.item, pressed && styles.pressed]}
           >
             <View style={styles.itemText}>
-              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.itemName}>{exerciseDisplayName(item, language)}</Text>
               <Text style={styles.itemMeta}>
-                {MUSCLE_GROUP_LABELS[item.muscleGroup]} · {EQUIPMENT_LABELS[item.equipment]}
+                {t(`muscle.${item.muscleGroup}`)} · {t(`equipment.${item.equipment}`)}
               </Text>
+              {item.secondaryMuscleGroups.length > 0 ? (
+                <Text style={styles.itemMeta}>
+                  {t('picker.secondary', {
+                    muscles: item.secondaryMuscleGroups.map((group) => t(`muscle.${group}`)).join(', '),
+                  })}
+                </Text>
+              ) : null}
             </View>
-            {item.isCustom ? <Text style={styles.badge}>Propio</Text> : null}
+            {item.isCustom ? <Text style={styles.badge}>{t('picker.custom')}</Text> : null}
           </Pressable>
         )}
       />

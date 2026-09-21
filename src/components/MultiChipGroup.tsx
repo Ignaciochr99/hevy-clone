@@ -5,27 +5,32 @@ import { Chip } from './Chip';
 type Props<T extends string> = {
   options: readonly T[];
   getLabel: (option: T) => string;
-  value: T;
-  onChange: (value: T) => void;
+  values: readonly T[];
+  onChange: (values: T[]) => void;
   disabled?: boolean;
 };
 
-export function ChipGroup<T extends string>({
+// Como ChipGroup, pero se pueden marcar varios: tocar un chip lo añade o lo quita.
+export function MultiChipGroup<T extends string>({
   options,
   getLabel,
-  value,
+  values,
   onChange,
   disabled,
 }: Props<T>) {
+  function toggle(option: T) {
+    onChange(values.includes(option) ? values.filter((v) => v !== option) : [...values, option]);
+  }
+
   return (
     <View style={styles.group}>
       {options.map((option) => (
         <Chip
           key={option}
           label={getLabel(option)}
-          selected={option === value}
+          selected={values.includes(option)}
           disabled={disabled}
-          onPress={() => onChange(option)}
+          onPress={() => toggle(option)}
         />
       ))}
     </View>

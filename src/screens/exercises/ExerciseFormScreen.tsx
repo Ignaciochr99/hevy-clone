@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
 import { ChipGroup } from '../../components/ChipGroup';
+import { MultiChipGroup } from '../../components/MultiChipGroup';
 import { Screen } from '../../components/Screen';
 import { TextField } from '../../components/TextField';
 import {
@@ -13,18 +14,17 @@ import {
   type ExerciseType,
   type MuscleGroup,
 } from '../../db/enums';
+import { translateError } from '../../i18n/translations';
+import { useTranslation } from '../../i18n/useTranslation';
 import type { ProfileStackParamList } from '../../navigation/types';
 import { repositories } from '../../repositories';
 import { colors, fontSize, spacing } from '../../theme';
-import { EQUIPMENT_LABELS, EXERCISE_TYPE_LABELS, MUSCLE_GROUP_LABELS } from '../../utils/labels';
+import { exerciseDisplayName } from '../../utils/exerciseName';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'ExerciseForm'>;
 
-function messageOf(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
-}
-
 export function ExerciseFormScreen({ navigation, route }: Props) {
+  const { t, language } = useTranslation();
   const exerciseId = route.params.exerciseId;
   const existing = useMemo(
     () => (exerciseId === undefined ? undefined : repositories.exercises.getById(exerciseId)),
@@ -32,15 +32,23 @@ export function ExerciseFormScreen({ navigation, route }: Props) {
   );
   const readOnly = existing !== undefined && !existing.isCustom;
 
-  const [name, setName] = useState(existing?.name ?? '');
+  const [name, setName] = useState(existing ? exerciseDisplayName(existing, language) : '');
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>(existing?.muscleGroup ?? 'chest');
+  const [secondary, setSecondary] = useState<MuscleGroup[]>(existing?.secondaryMuscleGroups ?? []);
   const [equipment, setEquipment] = useState<Equipment>(existing?.equipment ?? 'barbell');
   const [type, setType] = useState<ExerciseType>(existing?.type ?? 'weight_reps');
   const [error, setError] = useState<string>();
 
+  // Un grupo no puede ser a la vez principal y secundario: al elegirlo como
+  // principal, se quita de los secundarios.
+  function changeMuscleGroup(group: MuscleGroup) {
+    setMuscleGroup(group);
+    setSecondary((current) => current.filter((item) => item !== group));
+  }
+
   function save() {
     try {
-      const input = { name, muscleGroup, equipment, type };
+      const input = { name, muscleGroup, secondaryMuscleGroups: secondary, equipment, type };
       if (existing) {
         repositories.exercises.update(existing.id, input);
       } else {
@@ -48,7 +56,7 @@ export function ExerciseFormScreen({ navigation, route }: Props) {
       }
       navigation.goBack();
     } catch (e) {
-      setError(messageOf(e, 'No se pudo guardar el ejercicio'));
+      setError(translateError(language, e));
     }
   }
 
@@ -56,17 +64,17 @@ export function ExerciseFormScreen({ navigation, route }: Props) {
     if (!existing) {
       return;
     }
-    Alert.alert('Eliminar ejercicio', `¿Eliminar "${existing.name}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
+    Alert.alert(t('form.deleteTitle'), t('form.deleteConfirm', { name: existing.name }), [
+      { text: t('form.cancel'), style: 'cancel' },
       {
-        text: 'Eliminar',
+        text: t('form.delete'),
         style: 'destructive',
         onPress: () => {
           try {
             repositories.exercises.remove(existing.id);
             navigation.goBack();
           } catch (e) {
-            Alert.alert('No se puede eliminar', messageOf(e, 'Error desconocido'));
+            Alert.alert(t('form.cannotDeleteTitle'), translateError(language, e));
           }
         },
       },
@@ -76,46 +84,51 @@ export function ExerciseFormScreen({ navigation, route }: Props) {
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {readOnly ? (
-          <Text style={styles.note}>
-            Es un ejercicio de la biblioteca: no se puede modificar ni eliminar.
-          </Text>
-        ) : null}
+        {readOnly ? <Text style={styles.note}>{t('form.readOnlyNote')}</Text> : null}
 
-        <Text style={styles.label}>Nombre</Text>
+        <Text style={styles.label}>{t('form.name')}</Text>
         <TextField
           value={name}
           onChangeText={(text) => {
             setName(text);
             setError(undefined);
           }}
-          placeholder="Por ejemplo: Press inclinado"
+          placeholder={t('form.namePlaceholder')}
           editable={!readOnly}
         />
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Text style={styles.label}>Grupo muscular</Text>
+        <Text style={styles.label}>{t('form.primaryMuscle')}</Text>
         <ChipGroup
           options={MUSCLE_GROUPS}
-          labels={MUSCLE_GROUP_LABELS}
+          getLabel={(group) => t(`muscle.${group}`)}
           value={muscleGroup}
-          onChange={setMuscleGroup}
+          onChange={changeMuscleGroup}
           disabled={readOnly}
         />
 
-        <Text style={styles.label}>Equipo</Text>
+        <Text style={styles.label}>{t('form.secondaryMuscles')}</Text>
+        <MultiChipGroup
+          options={MUSCLE_GROUPS.filter((group) => group !== muscleGroup)}
+          getLabel={(group) => t(`muscle.${group}`)}
+          values={secondary}
+          onChange={setSecondary}
+          disabled={readOnly}
+        />
+
+        <Text style={styles.label}>{t('form.equipment')}</Text>
         <ChipGroup
           options={EQUIPMENT}
-          labels={EQUIPMENT_LABELS}
+          getLabel={(item) => t(`equipment.${item}`)}
           value={equipment}
           onChange={setEquipment}
           disabled={readOnly}
         />
 
-        <Text style={styles.label}>Tipo</Text>
+        <Text style={styles.label}>{t('form.type')}</Text>
         <ChipGroup
           options={EXERCISE_TYPES}
-          labels={EXERCISE_TYPE_LABELS}
+          getLabel={(item) => t(`exerciseType.${item}`)}
           value={type}
           onChange={setType}
           disabled={readOnly}
@@ -123,8 +136,10 @@ export function ExerciseFormScreen({ navigation, route }: Props) {
 
         {readOnly ? null : (
           <View style={styles.actions}>
-            <Button title="Guardar" onPress={save} />
-            {existing ? <Button title="Eliminar" variant="danger" onPress={confirmRemove} /> : null}
+            <Button title={t('form.save')} onPress={save} />
+            {existing ? (
+              <Button title={t('form.delete')} variant="danger" onPress={confirmRemove} />
+            ) : null}
           </View>
         )}
       </ScrollView>
