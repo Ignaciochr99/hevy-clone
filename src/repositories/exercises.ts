@@ -1,6 +1,6 @@
 import { and, count, eq, sql } from 'drizzle-orm';
 import type { Equipment, ExerciseType, MuscleGroup } from '../db/enums';
-import { exercises, routineExercises } from '../db/schema';
+import { exercises, routineExercises, workoutExercises } from '../db/schema';
 import type { Database } from '../db/types';
 import type { Language } from '../i18n/language';
 import { normalizeSearch } from '../utils/text';
@@ -137,14 +137,25 @@ export function createExercisesRepository(db: Database) {
 
     remove(id: number): void {
       getCustomOrThrow(id);
-      const uses =
+      // Un ejercicio que aparece en alguna rutina o en algún entrenamiento
+      // (en curso o terminado) no se puede borrar: se perdería el historial.
+      const inRoutines =
         db
           .select({ uses: count() })
           .from(routineExercises)
           .where(eq(routineExercises.exerciseId, id))
           .get()?.uses ?? 0;
-      if (uses > 0) {
-        throw new RepositoryError('exercise.inUse', 'El ejercicio se usa en alguna rutina');
+      const inWorkouts =
+        db
+          .select({ uses: count() })
+          .from(workoutExercises)
+          .where(eq(workoutExercises.exerciseId, id))
+          .get()?.uses ?? 0;
+      if (inRoutines + inWorkouts > 0) {
+        throw new RepositoryError(
+          'exercise.inUse',
+          'El ejercicio se usa en alguna rutina o entrenamiento',
+        );
       }
       db.delete(exercises).where(eq(exercises.id, id)).run();
     },

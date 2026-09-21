@@ -103,7 +103,7 @@ const es = {
   'error.exercise.nameEmpty': 'El nombre del ejercicio no puede estar vacío',
   'error.exercise.notFound': 'Ejercicio no encontrado',
   'error.exercise.libraryReadOnly': 'Los ejercicios de la biblioteca no se pueden modificar',
-  'error.exercise.inUse': 'El ejercicio se usa en alguna rutina',
+  'error.exercise.inUse': 'El ejercicio se usa en alguna rutina o entrenamiento',
   'error.exercise.secondaryIncludesPrimary':
     'El grupo secundario no puede ser el mismo que el principal',
   'error.routine.nameEmpty': 'El nombre de la rutina no puede estar vacío',
@@ -219,7 +219,7 @@ const en: Record<TranslationKey, string> = {
   'error.exercise.nameEmpty': 'The exercise name cannot be empty',
   'error.exercise.notFound': 'Exercise not found',
   'error.exercise.libraryReadOnly': 'Library exercises cannot be modified',
-  'error.exercise.inUse': 'This exercise is used in a routine',
+  'error.exercise.inUse': 'This exercise is used in a routine or workout',
   'error.exercise.secondaryIncludesPrimary':
     'A secondary muscle group cannot be the same as the primary one',
   'error.routine.nameEmpty': 'The routine name cannot be empty',

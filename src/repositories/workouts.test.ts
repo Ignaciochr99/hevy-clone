@@ -39,6 +39,7 @@ function setup() {
   });
   return {
     db,
+    exercises,
     workouts: createWorkoutsRepository(db),
     routines: createRoutinesRepository(db),
     bench,
@@ -370,5 +371,30 @@ describe('workouts.finish y discard', () => {
   test('discard de un entrenamiento que no existe falla', () => {
     const { workouts } = setup();
     expect(repositoryErrorCode(catchError(() => workouts.discard(999)))).toBe('workout.notFound');
+  });
+});
+
+describe('un ejercicio usado en un entrenamiento', () => {
+  test('no se puede borrar hasta que se descarta el entrenamiento', () => {
+    const { exercises, workouts, bench } = setup();
+    const started = workouts.start('A');
+    workouts.addExercise(started.id, bench.id);
+
+    expect(repositoryErrorCode(catchError(() => exercises.remove(bench.id)))).toBe('exercise.inUse');
+    expect(exercises.getById(bench.id)).toBeDefined();
+
+    workouts.discard(started.id);
+    exercises.remove(bench.id);
+    expect(exercises.getById(bench.id)).toBeUndefined();
+  });
+
+  test('tampoco cuando el entrenamiento ya está terminado', () => {
+    const { exercises, workouts, bench } = setup();
+    const started = workouts.start('A');
+    const workout = workouts.addExercise(started.id, bench.id);
+    workouts.updateSet(workout.exercises[0].sets[0].id, { reps: 5, completed: true });
+    workouts.finish(started.id);
+
+    expect(repositoryErrorCode(catchError(() => exercises.remove(bench.id)))).toBe('exercise.inUse');
   });
 });
