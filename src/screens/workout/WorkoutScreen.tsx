@@ -12,6 +12,7 @@ import { useActiveWorkout } from '../../stores/activeWorkout';
 import { colors, fontSize, spacing } from '../../theme';
 import { exerciseDisplayName } from '../../utils/exerciseName';
 import { elapsedSeconds, formatDuration } from '../../utils/time';
+import { RestPanel } from './RestPanel';
 import { SetRow } from './SetRow';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Workout'>;
@@ -105,6 +106,8 @@ export function WorkoutScreen({ navigation }: Props) {
         </View>
         <Button title={t('workout.finish')} onPress={finish} />
       </View>
+
+      <RestPanel />
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {workout.exercises.length === 0 ? <Text style={styles.empty}>{t('workout.empty')}</Text> : null}

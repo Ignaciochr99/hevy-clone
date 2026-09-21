@@ -1,4 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { RestTimerWatcher } from '../components/RestTimerWatcher';
 import { useTranslation } from '../i18n/useTranslation';
 import { ExerciseFormScreen } from '../screens/exercises/ExerciseFormScreen';
 import { WorkoutPickExerciseScreen } from '../screens/workout/WorkoutPickExerciseScreen';
@@ -15,28 +16,31 @@ export function RootStack() {
   const { t } = useTranslation();
 
   return (
-    <Stack.Navigator>
-      <Stack.Screen name="Tabs" component={RootTabs} options={{ headerShown: false }} />
-      <Stack.Screen
-        name="Workout"
-        component={WorkoutScreen}
-        options={{ presentation: 'modal', title: t('workout.header') }}
-      />
-      <Stack.Screen
-        name="WorkoutPickExercise"
-        component={WorkoutPickExerciseScreen}
-        options={{ title: t('routines.pickHeader') }}
-      />
-      <Stack.Screen
-        name="ExerciseForm"
-        component={ExerciseFormScreen}
-        options={({ route }) => ({
-          title:
-            route.params.exerciseId === undefined
-              ? t('exercises.newHeader')
-              : t('exercises.detailHeader'),
-        })}
-      />
-    </Stack.Navigator>
+    <>
+      <RestTimerWatcher />
+      <Stack.Navigator>
+        <Stack.Screen name="Tabs" component={RootTabs} options={{ headerShown: false }} />
+        <Stack.Screen
+          name="Workout"
+          component={WorkoutScreen}
+          options={{ presentation: 'modal', title: t('workout.header') }}
+        />
+        <Stack.Screen
+          name="WorkoutPickExercise"
+          component={WorkoutPickExerciseScreen}
+          options={{ title: t('routines.pickHeader') }}
+        />
+        <Stack.Screen
+          name="ExerciseForm"
+          component={ExerciseFormScreen}
+          options={({ route }) => ({
+            title:
+              route.params.exerciseId === undefined
+                ? t('exercises.newHeader')
+                : t('exercises.detailHeader'),
+          })}
+        />
+      </Stack.Navigator>
+    </>
   );
 }

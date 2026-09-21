@@ -6,6 +6,7 @@ import { useTranslation } from '../i18n/useTranslation';
 import type { RootStackParamList } from '../navigation/types';
 import { useActiveWorkout } from '../stores/activeWorkout';
 import { colors, fontSize, spacing } from '../theme';
+import { restRemainingSeconds } from '../utils/restTimer';
 import { elapsedSeconds, formatDuration } from '../utils/time';
 
 // La barra que se ve sobre las pestañas mientras hay un entrenamiento en curso.
@@ -24,6 +25,7 @@ export function ActiveWorkoutBar() {
 function BarContent({ name, startedAt }: { name: string; startedAt: Date }) {
   const { t } = useTranslation();
   const now = useNow();
+  const restEndsAt = useActiveWorkout((state) => state.rest?.endsAt);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   return (
@@ -39,7 +41,15 @@ function BarContent({ name, startedAt }: { name: string; startedAt: Date }) {
           {name}
         </Text>
       </View>
-      <Text style={styles.time}>{formatDuration(elapsedSeconds(startedAt, now))}</Text>
+      {restEndsAt !== undefined ? (
+        // Durante el descanso, la barra enseña lo que falta en lugar del cronómetro.
+        <View style={styles.rest}>
+          <Text style={styles.restLabel}>{t('workout.rest')}</Text>
+          <Text style={styles.time}>{formatDuration(restRemainingSeconds(restEndsAt, now))}</Text>
+        </View>
+      ) : (
+        <Text style={styles.time}>{formatDuration(elapsedSeconds(startedAt, now))}</Text>
+      )}
     </Pressable>
   );
 }
@@ -59,5 +69,7 @@ const styles = StyleSheet.create({
   text: { flex: 1 },
   title: { color: colors.text, fontSize: fontSize.body, fontWeight: '600' },
   name: { color: colors.textMuted, fontSize: fontSize.body - 2 },
+  rest: { alignItems: 'flex-end' },
+  restLabel: { color: colors.textMuted, fontSize: fontSize.body - 4 },
   time: { color: colors.primary, fontSize: fontSize.title, fontWeight: '600' },
 });

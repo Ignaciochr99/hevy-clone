@@ -104,6 +104,10 @@ const es = {
   'workout.column.reps': 'REPS',
   'workout.column.time': 'SEG',
   'workout.completeSet': 'Completar serie',
+  'workout.rest': 'Descanso',
+  'workout.restLess': 'Restar 15 segundos',
+  'workout.restMore': 'Sumar 15 segundos',
+  'workout.restSkip': 'Saltar',
 
   'muscle.chest': 'Pecho',
   'muscle.back': 'Espalda',
@@ -252,6 +256,10 @@ const en: Record<TranslationKey, string> = {
   'workout.column.reps': 'REPS',
   'workout.column.time': 'SEC',
   'workout.completeSet': 'Complete set',
+  'workout.rest': 'Rest',
+  'workout.restLess': 'Subtract 15 seconds',
+  'workout.restMore': 'Add 15 seconds',
+  'workout.restSkip': 'Skip',
 
   'muscle.chest': 'Chest',
   'muscle.back': 'Back',
