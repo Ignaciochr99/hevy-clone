@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import migrations from '../../drizzle/migrations';
 import { useTranslation } from '../i18n/useTranslation';
+import { useActiveWorkout } from '../stores/activeWorkout';
 import { useSettings } from '../stores/settings';
 import { colors, fontSize, spacing } from '../theme';
 import { db } from './client';
@@ -28,6 +29,8 @@ export function DatabaseGate({ children }: Props) {
       // Los ajustes (idioma) se leen antes de mostrar la app, para que la
       // primera pantalla ya salga en el idioma elegido.
       useSettings.getState().load();
+      // Y si la app se cerró con un entrenamiento a medias, se recupera.
+      useActiveWorkout.getState().load();
       setSeeded(true);
     } catch (e) {
       setSeedError(e instanceof Error ? e : new Error(String(e)));
