@@ -1,4 +1,5 @@
 import { createTestDb } from '../db/createTestDb';
+import { exercises as exercisesTable } from '../db/schema';
 import { seedExercises } from '../db/seed';
 import { repositoryErrorCode } from './errors';
 import { createExercisesRepository, type ExerciseInput } from './exercises';
@@ -194,5 +195,92 @@ describe('exercises: errores con código', () => {
       'exercise.libraryReadOnly',
     );
     expect(repositoryErrorCode(catchError(() => exercises.remove(library.id)))).toBe('exercise.libraryReadOnly');
+  });
+});
+
+describe('exercises: grupos secundarios', () => {
+  test('sin indicarlos, la lista queda vacía', () => {
+    const { exercises } = setup();
+    expect(exercises.create(pressBanca).secondaryMuscleGroups).toEqual([]);
+  });
+
+  test('se guardan y se leen como lista', () => {
+    const { exercises } = setup();
+    const created = exercises.create({ ...pressBanca, secondaryMuscleGroups: ['triceps', 'shoulders'] });
+    expect(created.secondaryMuscleGroups).toEqual(['triceps', 'shoulders']);
+    expect(exercises.getById(created.id)?.secondaryMuscleGroups).toEqual(['triceps', 'shoulders']);
+  });
+
+  test('se eliminan los repetidos', () => {
+    const { exercises } = setup();
+    const created = exercises.create({
+      ...pressBanca,
+      secondaryMuscleGroups: ['triceps', 'triceps', 'shoulders'],
+    });
+    expect(created.secondaryMuscleGroups).toEqual(['triceps', 'shoulders']);
+  });
+
+  test('rechaza un grupo secundario igual al principal', () => {
+    const { exercises } = setup();
+    const error = catchError(() => exercises.create({ ...pressBanca, secondaryMuscleGroups: ['chest'] }));
+    expect(repositoryErrorCode(error)).toBe('exercise.secondaryIncludesPrimary');
+  });
+
+  test('update puede cambiar solo los secundarios', () => {
+    const { exercises } = setup();
+    const created = exercises.create(pressBanca);
+    const updated = exercises.update(created.id, { secondaryMuscleGroups: ['triceps'] });
+    expect(updated.secondaryMuscleGroups).toEqual(['triceps']);
+    expect(updated.name).toBe('Press banca');
+  });
+
+  test('update rechaza pasar a principal un grupo que ya es secundario', () => {
+    const { exercises } = setup();
+    const created = exercises.create({ ...pressBanca, secondaryMuscleGroups: ['triceps'] });
+    const error = catchError(() => exercises.update(created.id, { muscleGroup: 'triceps' }));
+    expect(repositoryErrorCode(error)).toBe('exercise.secondaryIncludesPrimary');
+  });
+
+  test('update permite cambiar el principal y los secundarios a la vez', () => {
+    const { exercises } = setup();
+    const created = exercises.create({ ...pressBanca, secondaryMuscleGroups: ['triceps'] });
+    const updated = exercises.update(created.id, { muscleGroup: 'triceps', secondaryMuscleGroups: [] });
+    expect(updated).toMatchObject({ muscleGroup: 'triceps', secondaryMuscleGroups: [] });
+  });
+});
+
+describe('exercises: nombre en inglés', () => {
+  function insertLibrary(db: ReturnType<typeof setup>['db'], name: string, nameEn: string, slug: string) {
+    db.insert(exercisesTable)
+      .values({ slug, name, nameEn, muscleGroup: 'chest', equipment: 'barbell', type: 'weight_reps' })
+      .run();
+  }
+
+  test('la búsqueda encuentra por el nombre en español o en inglés', () => {
+    const { db, exercises } = setup();
+    insertLibrary(db, 'Aperturas con mancuernas', 'Dumbbell Fly', 'fly');
+    expect(exercises.list({ search: 'aperturas' })).toHaveLength(1);
+    expect(exercises.list({ search: 'DUMBBELL' })).toHaveLength(1);
+    expect(exercises.list({ search: 'zzz' })).toHaveLength(0);
+  });
+
+  test('con language "en" se ordena por el nombre en inglés', () => {
+    const { db, exercises } = setup();
+    insertLibrary(db, 'Sentadilla', 'Squat', 'squat');
+    insertLibrary(db, 'Zancada', 'Lunge', 'lunge');
+    insertLibrary(db, 'Abdominales', 'Crunch', 'crunch');
+    expect(exercises.list().map((e) => e.name)).toEqual(['Abdominales', 'Sentadilla', 'Zancada']);
+    expect(exercises.list({ language: 'en' }).map((e) => e.name)).toEqual([
+      'Abdominales',
+      'Zancada',
+      'Sentadilla',
+    ]);
+  });
+
+  test('un ejercicio propio, sin nombre en inglés, se ordena por su nombre', () => {
+    const { db, exercises } = setup();
+    insertLibrary(db, 'Sentadilla', 'Squat', 'squat');
+    exercises.create({ ...pressBanca, name: 'Mi ejercicio' });
+    expect(exercises.list({ language: 'en' }).map((e) => e.name)).toEqual(['Mi ejercicio', 'Sentadilla']);
   });
 });

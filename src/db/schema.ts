@@ -1,12 +1,20 @@
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { EQUIPMENT, EXERCISE_TYPES, MUSCLE_GROUPS } from './enums';
+import { EQUIPMENT, EXERCISE_TYPES, MUSCLE_GROUPS, type MuscleGroup } from './enums';
 
 export const exercises = sqliteTable('exercises', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   // Identificador estable de los ejercicios precargados; null en los propios.
   slug: text('slug').unique(),
+  // Nombre en español (o el que escribió el usuario en un ejercicio propio).
   name: text('name').notNull(),
+  // Nombre en inglés; solo los precargados lo tienen.
+  nameEn: text('name_en'),
   muscleGroup: text('muscle_group', { enum: MUSCLE_GROUPS }).notNull(),
+  // Lista de grupos secundarios, guardada como JSON: '["triceps","shoulders"]'.
+  secondaryMuscleGroups: text('secondary_muscle_groups', { mode: 'json' })
+    .$type<MuscleGroup[]>()
+    .notNull()
+    .default([]),
   equipment: text('equipment', { enum: EQUIPMENT }).notNull(),
   type: text('type', { enum: EXERCISE_TYPES }).notNull(),
   isCustom: integer('is_custom', { mode: 'boolean' }).notNull().default(false),

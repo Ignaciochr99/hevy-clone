@@ -2,8 +2,9 @@ import { and, count, eq, sql } from 'drizzle-orm';
 import type { Equipment, ExerciseType, MuscleGroup } from '../db/enums';
 import { exercises, routineExercises } from '../db/schema';
 import type { Database } from '../db/types';
-import { RepositoryError } from './errors';
+import type { Language } from '../i18n/language';
 import { normalizeSearch } from '../utils/text';
+import { RepositoryError } from './errors';
 
 export type Exercise = typeof exercises.$inferSelect;
 
@@ -12,12 +13,15 @@ export type ExerciseInput = {
   muscleGroup: MuscleGroup;
   equipment: Equipment;
   type: ExerciseType;
+  secondaryMuscleGroups?: MuscleGroup[];
 };
 
 export type ExerciseFilters = {
   search?: string;
   muscleGroup?: MuscleGroup;
   equipment?: Equipment;
+  // Idioma en el que se ordena la lista (por defecto, español).
+  language?: Language;
 };
 
 function cleanName(name: string): string {
@@ -26,6 +30,17 @@ function cleanName(name: string): string {
     throw new RepositoryError('exercise.nameEmpty', 'El nombre del ejercicio no puede estar vacío');
   }
   return trimmed;
+}
+
+// Quita los repetidos y comprueba que el grupo principal no esté entre ellos.
+function cleanSecondary(primary: MuscleGroup, secondary: readonly MuscleGroup[]): MuscleGroup[] {
+  if (secondary.includes(primary)) {
+    throw new RepositoryError(
+      'exercise.secondaryIncludesPrimary',
+      'El grupo muscular secundario no puede ser el mismo que el principal',
+    );
+  }
+  return [...new Set(secondary)];
 }
 
 export function createExercisesRepository(db: Database) {
@@ -47,9 +62,16 @@ export function createExercisesRepository(db: Database) {
 
   return {
     // El grupo y el equipo se filtran en SQL; el texto en TypeScript, porque
-    // SQLite no ignora los acentos. COLLATE NOCASE: "banca" queda entre
-    // "Aperturas" y "zancadas".
+    // SQLite no ignora los acentos. La búsqueda mira el nombre en español y en
+    // inglés. COLLATE NOCASE: "banca" queda entre "Aperturas" y "zancadas".
+    // En inglés se ordena por el nombre en inglés; los ejercicios propios, que
+    // no lo tienen, se ordenan por el suyo (COALESCE).
     list(filters: ExerciseFilters = {}): Exercise[] {
+      const orderName =
+        filters.language === 'en'
+          ? sql`COALESCE(${exercises.nameEn}, ${exercises.name}) COLLATE NOCASE`
+          : sql`${exercises.name} COLLATE NOCASE`;
+
       const rows = db
         .select()
         .from(exercises)
@@ -59,13 +81,18 @@ export function createExercisesRepository(db: Database) {
             filters.equipment && eq(exercises.equipment, filters.equipment),
           ),
         )
-        .orderBy(sql`${exercises.name} COLLATE NOCASE`)
+        .orderBy(orderName)
         .all();
 
       const search = normalizeSearch(filters.search ?? '');
-      return search === ''
-        ? rows
-        : rows.filter((row) => normalizeSearch(row.name).includes(search));
+      if (search === '') {
+        return rows;
+      }
+      return rows.filter(
+        (row) =>
+          normalizeSearch(row.name).includes(search) ||
+          (row.nameEn !== null && normalizeSearch(row.nameEn).includes(search)),
+      );
     },
 
     getById,
@@ -73,19 +100,39 @@ export function createExercisesRepository(db: Database) {
     create(input: ExerciseInput): Exercise {
       return db
         .insert(exercises)
-        .values({ ...input, name: cleanName(input.name), isCustom: true })
+        .values({
+          ...input,
+          name: cleanName(input.name),
+          secondaryMuscleGroups: cleanSecondary(input.muscleGroup, input.secondaryMuscleGroups ?? []),
+          isCustom: true,
+        })
         .returning()
         .get();
     },
 
     update(id: number, changes: Partial<ExerciseInput>): Exercise {
       const existing = getCustomOrThrow(id);
-      const { name, ...rest } = changes;
-      const values = name === undefined ? rest : { ...rest, name: cleanName(name) };
-      if (Object.keys(values).length === 0) {
+      if (Object.keys(changes).length === 0) {
         return existing;
       }
-      return db.update(exercises).set(values).where(eq(exercises.id, id)).returning().get();
+      // Los secundarios se revalidan con el grupo principal resultante, aunque
+      // solo cambie uno de los dos.
+      const primary = changes.muscleGroup ?? existing.muscleGroup;
+      const secondary = cleanSecondary(
+        primary,
+        changes.secondaryMuscleGroups ?? existing.secondaryMuscleGroups,
+      );
+      const { name, ...rest } = changes;
+      return db
+        .update(exercises)
+        .set({
+          ...rest,
+          ...(name !== undefined && { name: cleanName(name) }),
+          secondaryMuscleGroups: secondary,
+        })
+        .where(eq(exercises.id, id))
+        .returning()
+        .get();
     },
 
     remove(id: number): void {
