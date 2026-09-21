@@ -1,5 +1,5 @@
 import { createTestDb } from '../db/createTestDb';
-import { routineExercises } from '../db/schema';
+import { exercises as exercisesTable, routineExercises } from '../db/schema';
 import { repositoryErrorCode } from './errors';
 import { createExercisesRepository } from './exercises';
 import { createRoutinesRepository } from './routines';
@@ -254,5 +254,42 @@ describe('routines: errores con código', () => {
     const { exercises, routines, bench } = setup();
     routines.create({ name: 'Pecho', exercises: [{ exerciseId: bench.id, targetSets: 3, targetReps: 10 }] });
     expect(repositoryErrorCode(catchError(() => exercises.remove(bench.id)))).toBe('exercise.inUse');
+  });
+});
+
+describe('routines: nombre del ejercicio en inglés', () => {
+  test('un ejercicio de la biblioteca devuelve su nombre en español y en inglés', () => {
+    const { db, routines } = setup();
+    const library = db
+      .insert(exercisesTable)
+      .values({
+        slug: 'squat-barbell',
+        name: 'Sentadilla con barra',
+        nameEn: 'Barbell Squat',
+        muscleGroup: 'quadriceps',
+        equipment: 'barbell',
+        type: 'weight_reps',
+      })
+      .returning()
+      .get();
+
+    const routine = routines.create({
+      name: 'Piernas',
+      exercises: [{ exerciseId: library.id, targetSets: 4, targetReps: 6 }],
+    });
+
+    expect(routine.exercises[0]).toMatchObject({
+      exerciseName: 'Sentadilla con barra',
+      exerciseNameEn: 'Barbell Squat',
+    });
+  });
+
+  test('un ejercicio propio no tiene nombre en inglés', () => {
+    const { routines, bench } = setup();
+    const routine = routines.create({
+      name: 'Pecho',
+      exercises: [{ exerciseId: bench.id, targetSets: 3, targetReps: 10 }],
+    });
+    expect(routine.exercises[0].exerciseNameEn).toBeNull();
   });
 });

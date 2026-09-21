@@ -18,6 +18,7 @@ export type RoutineExercise = {
   id: number;
   exerciseId: number;
   exerciseName: string;
+  exerciseNameEn: string | null;
   position: number;
   targetSets: number;
   targetReps: number;
@@ -84,6 +85,7 @@ export function createRoutinesRepository(db: Database) {
         id: routineExercises.id,
         exerciseId: routineExercises.exerciseId,
         exerciseName: exercises.name,
+        exerciseNameEn: exercises.nameEn,
         position: routineExercises.position,
         targetSets: routineExercises.targetSets,
         targetReps: routineExercises.targetReps,
