@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { DatabaseGate } from './src/db/DatabaseGate';
-import { RootTabs } from './src/navigation/RootTabs';
+import { RootStack } from './src/navigation/RootStack';
 import { colors } from './src/theme';
 import { navigationTheme } from './src/theme/navigationTheme';
 
@@ -12,7 +12,7 @@ export default function App() {
     <GestureHandlerRootView style={styles.container}>
       <DatabaseGate>
         <NavigationContainer theme={navigationTheme}>
-          <RootTabs />
+          <RootStack />
         </NavigationContainer>
       </DatabaseGate>
       <StatusBar style="light" />

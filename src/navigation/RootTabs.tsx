@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { ComponentProps } from 'react';
+import { View } from 'react-native';
+import { ActiveWorkoutBar } from '../components/ActiveWorkoutBar';
 import { useTranslation } from '../i18n/useTranslation';
 import { colors } from '../theme';
 import { HomeStack } from './HomeStack';
@@ -23,6 +25,13 @@ export function RootTabs() {
 
   return (
     <Tab.Navigator
+      // La barra del entrenamiento en curso va justo encima de la barra de pestañas.
+      tabBar={(props) => (
+        <View>
+          <ActiveWorkoutBar />
+          <BottomTabBar {...props} />
+        </View>
+      )}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarInactiveTintColor: colors.textMuted,
