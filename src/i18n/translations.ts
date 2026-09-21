@@ -18,6 +18,10 @@ const es = {
   'routines.empty': 'Aún no tienes rutinas. ¡Crea la primera!',
   'routines.exerciseCount.one': '1 ejercicio',
   'routines.exerciseCount.other': '{count} ejercicios',
+  'routines.setCount.one': '1 serie',
+  'routines.setCount.other': '{count} series',
+  'routineEditor.rpe': 'RPE',
+  'routineEditor.rest': 'Descanso',
   'routines.pickHeader': 'Elegir ejercicio',
   'routineEditor.editHeader': 'Rutina',
   'routineEditor.name': 'Nombre de la rutina',
@@ -124,6 +128,10 @@ const en: Record<TranslationKey, string> = {
   'routines.empty': "You don't have any routines yet. Create your first one!",
   'routines.exerciseCount.one': '1 exercise',
   'routines.exerciseCount.other': '{count} exercises',
+  'routines.setCount.one': '1 set',
+  'routines.setCount.other': '{count} sets',
+  'routineEditor.rpe': 'RPE',
+  'routineEditor.rest': 'Rest',
   'routines.pickHeader': 'Choose exercise',
   'routineEditor.editHeader': 'Routine',
   'routineEditor.name': 'Routine name',
@@ -238,4 +246,19 @@ export function translate(
 export function translateError(language: Language, error: unknown): string {
   const code = repositoryErrorCode(error);
   return translate(language, code ? `error.${code}` : 'error.unknown');
+}
+
+// "4 ejercicios · 14 series" (con singular y plural en cada idioma).
+export function routineSummary(language: Language, exercises: number, sets: number): string {
+  const exerciseText = translate(
+    language,
+    exercises === 1 ? 'routines.exerciseCount.one' : 'routines.exerciseCount.other',
+    { count: exercises },
+  );
+  const setText = translate(
+    language,
+    sets === 1 ? 'routines.setCount.one' : 'routines.setCount.other',
+    { count: sets },
+  );
+  return `${exerciseText} · ${setText}`;
 }

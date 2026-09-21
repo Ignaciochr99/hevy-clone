@@ -6,21 +6,28 @@ import { IconButton } from '../../components/IconButton';
 import { Screen } from '../../components/Screen';
 import { Stepper } from '../../components/Stepper';
 import { TextField } from '../../components/TextField';
-import { translateError } from '../../i18n/translations';
+import { routineSummary, translateError } from '../../i18n/translations';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { RoutinesStackParamList } from '../../navigation/types';
 import { repositories } from '../../repositories';
 import { colors, fontSize, spacing } from '../../theme';
 import { exerciseDisplayName } from '../../utils/exerciseName';
+import { formatRpe } from '../../utils/format';
 import {
   addItem,
   fromRoutine,
   moveItem,
   removeItem,
+  setRest,
+  setRpe,
   setTarget,
+  stepRest,
+  stepRpe,
+  summarize,
   toRoutineInput,
   type DraftItem,
 } from '../../utils/routineDraft';
+import { formatDuration } from '../../utils/time';
 
 type Props = NativeStackScreenProps<RoutinesStackParamList, 'RoutineEditor'>;
 
@@ -44,6 +51,7 @@ export function RoutineEditorScreen({ navigation, route }: Props) {
     existing ? fromRoutine(existing, nextKey) : [],
   );
   const [error, setError] = useState<string>();
+  const summary = summarize(items);
 
   // Al elegir un ejercicio en el selector se vuelve aquí con `pickedExerciseId`.
   // Lo añadimos al borrador y limpiamos el parámetro para no añadirlo otra vez.
@@ -108,7 +116,11 @@ export function RoutineEditorScreen({ navigation, route }: Props) {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Text style={styles.label}>{t('routineEditor.exercises')}</Text>
-        {items.length === 0 ? <Text style={styles.empty}>{t('routineEditor.noExercises')}</Text> : null}
+        {items.length === 0 ? (
+          <Text style={styles.empty}>{t('routineEditor.noExercises')}</Text>
+        ) : (
+          <Text style={styles.summary}>{routineSummary(language, summary.exercises, summary.sets)}</Text>
+        )}
 
         {items.map((item, index) => (
           <View key={item.key} style={styles.card}>
@@ -136,13 +148,49 @@ export function RoutineEditorScreen({ navigation, route }: Props) {
             </View>
             <Stepper
               label={t('routineEditor.sets')}
-              value={item.targetSets}
-              onChange={(value) => setItems((current) => setTarget(current, item.key, 'targetSets', value))}
+              valueText={String(item.targetSets)}
+              decreaseDisabled={item.targetSets <= 1}
+              onDecrease={() =>
+                setItems((current) => setTarget(current, item.key, 'targetSets', item.targetSets - 1))
+              }
+              onIncrease={() =>
+                setItems((current) => setTarget(current, item.key, 'targetSets', item.targetSets + 1))
+              }
             />
             <Stepper
               label={t('routineEditor.reps')}
-              value={item.targetReps}
-              onChange={(value) => setItems((current) => setTarget(current, item.key, 'targetReps', value))}
+              valueText={String(item.targetReps)}
+              decreaseDisabled={item.targetReps <= 1}
+              onDecrease={() =>
+                setItems((current) => setTarget(current, item.key, 'targetReps', item.targetReps - 1))
+              }
+              onIncrease={() =>
+                setItems((current) => setTarget(current, item.key, 'targetReps', item.targetReps + 1))
+              }
+            />
+            <Stepper
+              label={t('routineEditor.rpe')}
+              valueText={formatRpe(item.targetRpe, language)}
+              decreaseDisabled={item.targetRpe === null}
+              increaseDisabled={item.targetRpe === 10}
+              onDecrease={() =>
+                setItems((current) => setRpe(current, item.key, stepRpe(item.targetRpe, -1)))
+              }
+              onIncrease={() =>
+                setItems((current) => setRpe(current, item.key, stepRpe(item.targetRpe, 1)))
+              }
+            />
+            <Stepper
+              label={t('routineEditor.rest')}
+              valueText={formatDuration(item.restSeconds)}
+              decreaseDisabled={item.restSeconds <= 0}
+              increaseDisabled={item.restSeconds >= 600}
+              onDecrease={() =>
+                setItems((current) => setRest(current, item.key, stepRest(item.restSeconds, -1)))
+              }
+              onIncrease={() =>
+                setItems((current) => setRest(current, item.key, stepRest(item.restSeconds, 1)))
+              }
             />
           </View>
         ))}
@@ -167,6 +215,7 @@ const styles = StyleSheet.create({
   },
   error: { color: colors.danger, fontSize: fontSize.body, marginTop: spacing.sm },
   empty: { color: colors.textMuted, fontSize: fontSize.body },
+  summary: { color: colors.primary, fontSize: fontSize.body, fontWeight: '600' },
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,

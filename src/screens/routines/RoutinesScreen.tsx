@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text } from 'react-native';
 import { Button } from '../../components/Button';
 import { Screen } from '../../components/Screen';
+import { routineSummary } from '../../i18n/translations';
 import { useTranslation } from '../../i18n/useTranslation';
 import type { RoutinesStackParamList } from '../../navigation/types';
 import { repositories } from '../../repositories';
@@ -12,7 +13,7 @@ import { colors, fontSize, spacing } from '../../theme';
 type Props = NativeStackScreenProps<RoutinesStackParamList, 'Routines'>;
 
 export function RoutinesScreen({ navigation }: Props) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [version, setVersion] = useState(0);
 
   // Al volver de crear o editar una rutina, la lista se recarga.
@@ -44,9 +45,7 @@ export function RoutinesScreen({ navigation }: Props) {
           >
             <Text style={styles.name}>{item.name}</Text>
             <Text style={styles.meta}>
-              {item.exerciseCount === 1
-                ? t('routines.exerciseCount.one')
-                : t('routines.exerciseCount.other', { count: item.exerciseCount })}
+              {routineSummary(language, item.exerciseCount, item.totalSets)}
             </Text>
           </Pressable>
         )}

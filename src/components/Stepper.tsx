@@ -4,13 +4,24 @@ import { IconButton } from './IconButton';
 
 type Props = {
   label: string;
-  value: number;
-  onChange: (value: number) => void;
-  min?: number;
+  // El valor ya formateado: "3", "8,5", "—", "1:30"...
+  valueText: string;
+  onDecrease: () => void;
+  onIncrease: () => void;
+  decreaseDisabled?: boolean;
+  increaseDisabled?: boolean;
 };
 
-// Un contador con los botones − y +. No baja de `min`.
-export function Stepper({ label, value, onChange, min = 1 }: Props) {
+// Un contador con los botones − y +. No sabe qué representa el valor: quien lo
+// usa decide cómo se escribe y cuándo se agota cada botón.
+export function Stepper({
+  label,
+  valueText,
+  onDecrease,
+  onIncrease,
+  decreaseDisabled,
+  increaseDisabled,
+}: Props) {
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
@@ -18,11 +29,16 @@ export function Stepper({ label, value, onChange, min = 1 }: Props) {
         <IconButton
           icon="remove"
           accessibilityLabel={`${label} −`}
-          disabled={value <= min}
-          onPress={() => onChange(value - 1)}
+          disabled={decreaseDisabled}
+          onPress={onDecrease}
         />
-        <Text style={styles.value}>{value}</Text>
-        <IconButton icon="add" accessibilityLabel={`${label} +`} onPress={() => onChange(value + 1)} />
+        <Text style={styles.value}>{valueText}</Text>
+        <IconButton
+          icon="add"
+          accessibilityLabel={`${label} +`}
+          disabled={increaseDisabled}
+          onPress={onIncrease}
+        />
       </View>
     </View>
   );
@@ -36,7 +52,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: fontSize.body,
     fontWeight: '600',
-    minWidth: 32,
+    minWidth: 48,
     textAlign: 'center',
   },
 });

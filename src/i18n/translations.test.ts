@@ -1,6 +1,12 @@
 import { EQUIPMENT, EXERCISE_TYPES, MUSCLE_GROUPS } from '../db/enums';
 import { REPOSITORY_ERROR_CODES, RepositoryError } from '../repositories/errors';
-import { translate, translateError, translations, type TranslationKey } from './translations';
+import {
+  routineSummary,
+  translate,
+  translateError,
+  translations,
+  type TranslationKey,
+} from './translations';
 
 const placeholders = (text: string) => (text.match(/\{\w+\}/g) ?? []).sort();
 
@@ -63,5 +69,18 @@ describe('translateError', () => {
   test('un error sin código da el mensaje genérico', () => {
     expect(translateError('en', new Error('algo raro'))).toBe(translate('en', 'error.unknown'));
     expect(translateError('es', 'texto')).toBe(translate('es', 'error.unknown'));
+  });
+});
+
+describe('routineSummary', () => {
+  test.each([
+    ['es', 4, 14, '4 ejercicios · 14 series'],
+    ['es', 1, 1, '1 ejercicio · 1 serie'],
+    ['es', 0, 0, '0 ejercicios · 0 series'],
+    ['en', 4, 14, '4 exercises · 14 sets'],
+    ['en', 1, 1, '1 exercise · 1 set'],
+    ['en', 0, 0, '0 exercises · 0 sets'],
+  ] as const)('%s: %p ejercicios y %p series', (language, exercises, sets, expected) => {
+    expect(routineSummary(language, exercises, sets)).toBe(expected);
   });
 });
